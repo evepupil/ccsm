@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatBytes, formatRelativeTime, normalizeSearch } from "./format";
+import { formatBytes, formatCount, formatRelativeTime, normalizeSearch } from "./format";
 
 describe("formatRelativeTime", () => {
   const now = Date.parse("2026-07-27T06:00:00Z");
@@ -28,5 +28,11 @@ describe("formatBytes", () => {
 describe("normalizeSearch", () => {
   it("trims and normalizes case", () => {
     expect(normalizeSearch("  EdgeDisk  ")).toBe("edgedisk");
+  });
+});
+
+describe("formatCount", () => {
+  it("compacts large token counts", () => {
+    expect(formatCount(12_000)).toContain("1.2万");
   });
 });

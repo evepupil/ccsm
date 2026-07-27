@@ -42,10 +42,18 @@ export function formatBytes(bytes: number): string {
 }
 
 export function titleSourceLabel(source: string): string {
+  if (source === "codexIndex") return "Codex 标题";
   if (source === "summary") return "会话摘要";
   if (source === "firstMessage") return "首条消息";
   if (source === "fallback") return "自动命名";
   return "Desktop 标题";
+}
+
+export function formatCount(value: number): string {
+  return new Intl.NumberFormat("zh-CN", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
 }
 
 export function normalizeSearch(value: string): string {

@@ -9,12 +9,13 @@ import {
 import { useMemo, useState } from "react";
 
 import { formatRelativeTime, normalizeSearch } from "../lib/format";
-import type { ProjectSummary } from "../types";
+import type { ProjectSummary, ProviderFilter } from "../types";
 
 interface ProjectTreeProps {
   projects: ProjectSummary[];
   selectedProjectId: string | null;
   searchQuery: string;
+  providerFilter: ProviderFilter;
   onSelectProject: (projectId: string) => void;
 }
 
@@ -22,6 +23,7 @@ export function ProjectTree({
   projects,
   selectedProjectId,
   searchQuery,
+  providerFilter,
   onSelectProject,
 }: ProjectTreeProps) {
   const [rootOpen, setRootOpen] = useState(true);
@@ -29,17 +31,22 @@ export function ProjectTree({
   const normalizedQuery = normalizeSearch(searchQuery);
 
   const visibleProjects = useMemo(() => {
-    if (!normalizedQuery) return projects;
     return projects.filter((project) => {
+      if (providerFilter !== "all" && !project.providers.includes(providerFilter)) return false;
+      if (!normalizedQuery) return true;
       const projectMatch = `${project.name} ${project.path}`.toLocaleLowerCase("zh-CN");
       return (
         projectMatch.includes(normalizedQuery) ||
-        project.sessions.some((session) =>
-          `${session.title} ${session.id}`.toLocaleLowerCase("zh-CN").includes(normalizedQuery),
+        project.sessions.some(
+          (session) =>
+            (providerFilter === "all" || session.provider === providerFilter) &&
+            `${session.title} ${session.id} ${session.provider} ${session.sourceDetail ?? ""}`
+              .toLocaleLowerCase("zh-CN")
+              .includes(normalizedQuery),
         )
       );
     });
-  }, [normalizedQuery, projects]);
+  }, [normalizedQuery, projects, providerFilter]);
 
   function selectProject(project: ProjectSummary) {
     onSelectProject(project.id);
@@ -63,14 +70,14 @@ export function ProjectTree({
     <aside className="project-sidebar" aria-label="项目目录">
       <div className="sidebar-heading">
         <span>项目目录</span>
-        <span className="count-label">{projects.length}</span>
+        <span className="count-label">{visibleProjects.length}</span>
       </div>
 
-      <nav className="tree" aria-label="Claude 项目树">
+      <nav className="tree" aria-label="本机会话项目树">
         <button className="tree-root" type="button" onClick={() => setRootOpen((open) => !open)}>
           {rootOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           <Library size={17} />
-          <span>本机 Claude 项目</span>
+          <span>本机项目</span>
         </button>
 
         {rootOpen && (
@@ -78,6 +85,9 @@ export function ProjectTree({
             {visibleProjects.map((project) => {
               const expanded = expandedProjects.has(project.id);
               const selected = selectedProjectId === project.id;
+              const projectSessions = project.sessions.filter(
+                (session) => providerFilter === "all" || session.provider === providerFilter,
+              );
               return (
                 <div className="project-node" key={project.id}>
                   <div className={`project-row${selected ? " selected" : ""}`}>
@@ -100,7 +110,10 @@ export function ProjectTree({
                       <span className="project-label">
                         <strong>{project.name}</strong>
                         <small>
-                          {project.sessionCount} 条 · {formatRelativeTime(project.lastActivity)}
+                          {projectSessions.length} 条 ·{" "}
+                          {formatRelativeTime(
+                            projectSessions[0]?.lastActivity ?? project.lastActivity,
+                          )}
                         </small>
                       </span>
                     </button>
@@ -108,7 +121,7 @@ export function ProjectTree({
 
                   {expanded && (
                     <div className="session-branches">
-                      {project.sessions.slice(0, 6).map((session) => (
+                      {projectSessions.slice(0, 6).map((session) => (
                         <button
                           type="button"
                           className="session-branch"
@@ -116,12 +129,16 @@ export function ProjectTree({
                           title={session.title}
                           onClick={() => selectProject(project)}
                         >
+                          <span
+                            className={`provider-mark ${session.provider}`}
+                            title={session.provider === "claude" ? "Claude Code" : "Codex"}
+                          />
                           <MessageSquare size={13} />
                           <span>{session.title}</span>
                         </button>
                       ))}
-                      {project.sessions.length > 6 && (
-                        <span className="more-sessions">还有 {project.sessions.length - 6} 条</span>
+                      {projectSessions.length > 6 && (
+                        <span className="more-sessions">还有 {projectSessions.length - 6} 条</span>
                       )}
                     </div>
                   )}

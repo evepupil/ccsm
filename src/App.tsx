@@ -4,17 +4,26 @@ import {
   Database,
   RefreshCw,
   Search,
+  ShieldAlert,
   TerminalSquare,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { getCliStatus, resumeSession, scanSessionCatalog } from "./api";
+import { getCliStatuses, resumeSession, scanSessionCatalog } from "./api";
 import { ProjectTree } from "./components/ProjectTree";
 import { SessionTable } from "./components/SessionTable";
 import { formatAbsoluteTime, normalizeSearch } from "./lib/format";
+import { highestPermissionWarning, launchSessionKey } from "./lib/launch";
 import { selectVisibleSessions } from "./lib/sessions";
-import type { CliStatus, ProjectSummary, SessionSort, SessionSummary } from "./types";
+import type {
+  CliStatus,
+  ProjectSummary,
+  ProviderFilter,
+  SessionProvider,
+  SessionSort,
+  SessionSummary,
+} from "./types";
 
 interface Notice {
   kind: "success" | "error";
@@ -25,15 +34,17 @@ export default function App() {
   const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof scanSessionCatalog>> | null>(
     null,
   );
-  const [cliStatus, setCliStatus] = useState<CliStatus | null>(null);
+  const [cliStatuses, setCliStatuses] = useState<CliStatus[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() =>
     localStorage.getItem("selectedProjectId"),
   );
   const [searchQuery, setSearchQuery] = useState("");
+  const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
   const [sort, setSort] = useState<SessionSort>("recent");
   const [showArchived, setShowArchived] = useState(false);
+  const [highestPermissions, setHighestPermissions] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [launchingSessionId, setLaunchingSessionId] = useState<string | null>(null);
+  const [launchingKey, setLaunchingKey] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,12 +52,12 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const [nextCatalog, nextCliStatus] = await Promise.all([
+      const [nextCatalog, nextCliStatuses] = await Promise.all([
         scanSessionCatalog(),
-        getCliStatus(),
+        getCliStatuses(),
       ]);
       setCatalog(nextCatalog);
-      setCliStatus(nextCliStatus);
+      setCliStatuses(nextCliStatuses);
       setSelectedProjectId((current) => {
         const stillExists = nextCatalog.projects.some((project) => project.id === current);
         const nextId = stillExists ? current : (nextCatalog.projects[0]?.id ?? null);
@@ -76,14 +87,15 @@ export default function App() {
         projects: catalog?.projects ?? [],
         selectedProjectId,
         searchQuery,
+        providerFilter,
         showArchived,
         sort,
       }),
-    [catalog, searchQuery, selectedProjectId, showArchived, sort],
+    [catalog, providerFilter, searchQuery, selectedProjectId, showArchived, sort],
   );
-
   const sessionCount =
     catalog?.projects.reduce((total, project) => total + project.sessionCount, 0) ?? 0;
+  const permissionWarning = highestPermissionWarning(highestPermissions);
 
   function selectProject(projectId: string) {
     setSelectedProjectId(projectId);
@@ -91,19 +103,40 @@ export default function App() {
     if (searchQuery) setSearchQuery("");
   }
 
+  function changeProviderFilter(nextFilter: ProviderFilter) {
+    setProviderFilter(nextFilter);
+    setSelectedProjectId((current) => {
+      const projects = catalog?.projects ?? [];
+      const currentProject = projects.find((project) => project.id === current);
+      if (
+        currentProject &&
+        (nextFilter === "all" || currentProject.providers.includes(nextFilter))
+      ) {
+        return current;
+      }
+      const nextId =
+        projects.find((project) => nextFilter === "all" || project.providers.includes(nextFilter))
+          ?.id ?? null;
+      if (nextId) localStorage.setItem("selectedProjectId", nextId);
+      return nextId;
+    });
+  }
+
   async function launch(session: SessionSummary, fork: boolean) {
-    setLaunchingSessionId(session.id);
+    setLaunchingKey(launchSessionKey(session.provider, session.id));
     setNotice(null);
     try {
-      const result = await resumeSession(session.id, fork);
+      const result = await resumeSession(session.provider, session.id, fork, highestPermissions);
       setNotice({
         kind: "success",
-        message: `${result.terminal} 已启动${result.forked ? "分叉会话" : "原会话"}`,
+        message: `${result.terminal} 已启动 ${providerLabel(result.provider)} ${
+          result.forked ? "分叉会话" : "原会话"
+        }${result.highestPermissions ? "（最高权限）" : ""}`,
       });
     } catch (cause) {
       setNotice({ kind: "error", message: toErrorMessage(cause) });
     } finally {
-      setLaunchingSessionId(null);
+      setLaunchingKey(null);
     }
   }
 
@@ -116,6 +149,18 @@ export default function App() {
     }
   }
 
+  const sourceSummary =
+    catalog?.sources
+      .map((source) =>
+        source.available
+          ? `${providerLabel(source.provider)} ${source.sessionCount} 条`
+          : `${providerLabel(source.provider)} 未发现`,
+      )
+      .join(" · ") ?? "等待扫描";
+  const sourceLocations = catalog?.sources
+    .map((source) => (source.error ? `${source.location}\n${source.error}` : source.location))
+    .join("\n\n");
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -124,7 +169,7 @@ export default function App() {
             <TerminalSquare size={20} />
           </div>
           <div>
-            <h1>Claude 会话管理器</h1>
+            <h1>CCSM</h1>
             <p>{sessionCount} 条本机会话</p>
           </div>
         </div>
@@ -151,7 +196,7 @@ export default function App() {
         </label>
 
         <div className="header-tools">
-          <CliIndicator status={cliStatus} />
+          <CliIndicators statuses={cliStatuses} />
           <button
             className="icon-button"
             type="button"
@@ -170,24 +215,37 @@ export default function App() {
           projects={catalog?.projects ?? []}
           selectedProjectId={selectedProjectId}
           searchQuery={searchQuery}
+          providerFilter={providerFilter}
           onSelectProject={selectProject}
         />
 
         <main className="session-pane">
-          <SessionToolbar
-            selectedProject={selectedProject}
-            searching={Boolean(normalizedQuery)}
-            resultCount={sessions.length}
-            sort={sort}
-            showArchived={showArchived}
-            onSortChange={setSort}
-            onShowArchivedChange={setShowArchived}
-          />
+          <div className="session-toolbar-stack">
+            <SessionToolbar
+              selectedProject={selectedProject}
+              searching={Boolean(normalizedQuery)}
+              resultCount={sessions.length}
+              providerFilter={providerFilter}
+              sort={sort}
+              showArchived={showArchived}
+              highestPermissions={highestPermissions}
+              onProviderFilterChange={changeProviderFilter}
+              onSortChange={setSort}
+              onShowArchivedChange={setShowArchived}
+              onHighestPermissionsChange={setHighestPermissions}
+            />
+            {permissionWarning && (
+              <div className="permission-warning" role="alert">
+                <ShieldAlert size={15} />
+                <span>{permissionWarning}</span>
+              </div>
+            )}
+          </div>
 
           {error ? (
             <div className="fatal-state" role="alert">
               <AlertCircle size={28} />
-              <h2>无法读取 Claude 会话</h2>
+              <h2>无法读取本机会话</h2>
               <p>{error}</p>
               <button type="button" onClick={() => void refresh()}>
                 <RefreshCw size={15} /> 重试
@@ -201,7 +259,7 @@ export default function App() {
           ) : (
             <SessionTable
               sessions={sessions}
-              launchingSessionId={launchingSessionId}
+              launchingSessionKey={launchingKey}
               onResume={(session, fork) => void launch(session, fork)}
               onCopyId={(sessionId) => void copySessionId(sessionId)}
             />
@@ -210,8 +268,8 @@ export default function App() {
       </div>
 
       <footer className="status-bar">
-        <span>
-          <Database size={13} /> {catalog?.sessionsRoot ?? "等待扫描"}
+        <span title={sourceLocations}>
+          <Database size={13} /> {sourceSummary}
         </span>
         <span>
           {catalog?.warnings[0] ??
@@ -236,20 +294,28 @@ interface SessionToolbarProps {
   selectedProject: ProjectSummary | null;
   searching: boolean;
   resultCount: number;
+  providerFilter: ProviderFilter;
   sort: SessionSort;
   showArchived: boolean;
+  highestPermissions: boolean;
+  onProviderFilterChange: (filter: ProviderFilter) => void;
   onSortChange: (sort: SessionSort) => void;
   onShowArchivedChange: (show: boolean) => void;
+  onHighestPermissionsChange: (enabled: boolean) => void;
 }
 
 function SessionToolbar({
   selectedProject,
   searching,
   resultCount,
+  providerFilter,
   sort,
   showArchived,
+  highestPermissions,
+  onProviderFilterChange,
   onSortChange,
   onShowArchivedChange,
+  onHighestPermissionsChange,
 }: SessionToolbarProps) {
   return (
     <div className="session-toolbar">
@@ -260,6 +326,26 @@ function SessionToolbar({
         </p>
       </div>
       <div className="view-controls">
+        <div className="segmented-control provider-filter" aria-label="会话来源">
+          {(["all", "claude", "codex"] as const).map((provider) => (
+            <button
+              type="button"
+              key={provider}
+              className={providerFilter === provider ? "active" : ""}
+              onClick={() => onProviderFilterChange(provider)}
+            >
+              {provider === "all" ? "全部" : providerLabel(provider)}
+            </button>
+          ))}
+        </div>
+        <label className={`permission-toggle${highestPermissions ? " enabled" : ""}`}>
+          <input
+            type="checkbox"
+            checked={highestPermissions}
+            onChange={(event) => onHighestPermissionsChange(event.target.checked)}
+          />
+          <span>最高权限</span>
+        </label>
         <label className="archive-toggle">
           <input
             type="checkbox"
@@ -268,7 +354,7 @@ function SessionToolbar({
           />
           <span>显示归档</span>
         </label>
-        <div className="segmented-control" aria-label="会话排序方式">
+        <div className="segmented-control sort-control" aria-label="会话排序方式">
           <button
             type="button"
             className={sort === "recent" ? "active" : ""}
@@ -289,21 +375,46 @@ function SessionToolbar({
   );
 }
 
-function CliIndicator({ status }: { status: CliStatus | null }) {
-  if (!status) return <span className="cli-indicator neutral">检测 CLI</span>;
-  if (!status.available) return <span className="cli-indicator error">CLI 未安装</span>;
+function CliIndicators({ statuses }: { statuses: CliStatus[] }) {
+  return (
+    <div className="cli-indicators">
+      {(["claude", "codex"] as const).map((provider) => (
+        <CliIndicator
+          key={provider}
+          provider={provider}
+          status={statuses.find((status) => status.provider === provider) ?? null}
+        />
+      ))}
+    </div>
+  );
+}
+
+function CliIndicator({
+  provider,
+  status,
+}: {
+  provider: SessionProvider;
+  status: CliStatus | null;
+}) {
+  const label = providerLabel(provider);
+  if (!status) return <span className="cli-indicator neutral">{label} 检测中</span>;
+  if (!status.available) return <span className="cli-indicator error">{label} 未安装</span>;
   if (status.loggedIn === false) {
     return (
-      <span className="cli-indicator warning" title="新终端可能要求登录或配置 Gateway">
-        CLI 未登录
+      <span className="cli-indicator warning" title="新终端可能要求登录或配置 API">
+        {label} 未登录
       </span>
     );
   }
   return (
     <span className="cli-indicator ready" title={status.version ?? undefined}>
-      CLI 就绪
+      {label} 就绪
     </span>
   );
+}
+
+function providerLabel(provider: SessionProvider): string {
+  return provider === "claude" ? "Claude" : "Codex";
 }
 
 function toErrorMessage(cause: unknown): string {

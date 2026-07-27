@@ -1,10 +1,11 @@
-import type { ProjectSummary, SessionSort, SessionSummary } from "../types";
+import type { ProjectSummary, ProviderFilter, SessionSort, SessionSummary } from "../types";
 import { normalizeSearch } from "./format";
 
 interface SessionFilter {
   projects: ProjectSummary[];
   selectedProjectId: string | null;
   searchQuery: string;
+  providerFilter: ProviderFilter;
   showArchived: boolean;
   sort: SessionSort;
 }
@@ -13,6 +14,7 @@ export function selectVisibleSessions({
   projects,
   selectedProjectId,
   searchQuery,
+  providerFilter,
   showArchived,
   sort,
 }: SessionFilter): SessionSummary[] {
@@ -24,6 +26,7 @@ export function selectVisibleSessions({
 
   const filtered = source.filter((session) => {
     if (!showArchived && session.isArchived) return false;
+    if (providerFilter !== "all" && session.provider !== providerFilter) return false;
     if (!normalizedQuery) return true;
     const haystack = [
       session.title,
@@ -31,6 +34,8 @@ export function selectVisibleSessions({
       session.projectPath,
       session.branch ?? "",
       session.model ?? "",
+      session.provider,
+      session.sourceDetail ?? "",
     ]
       .join(" ")
       .toLocaleLowerCase("zh-CN");

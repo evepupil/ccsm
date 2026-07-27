@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     env,
     fs::{self, File},
     io::{BufRead, BufReader},
@@ -9,25 +9,12 @@ use std::{
 use chrono::{DateTime, SecondsFormat, Utc};
 use serde::Deserialize;
 use serde_json::Value;
-use thiserror::Error;
 use uuid::Uuid;
 
-use crate::models::{ProjectSummary, SessionCatalog, SessionSummary};
+use super::ProviderScan;
+use crate::models::{SessionProvider, SessionSummary};
 
 const MAX_TITLE_CHARS: usize = 96;
-
-#[derive(Debug, Error)]
-pub enum ScanError {
-    #[error("无法确定当前 Windows 用户目录")]
-    HomeUnavailable,
-    #[error("Claude 会话目录不存在：{0}")]
-    SessionsMissing(String),
-    #[error("无法读取 Claude 会话目录 {path}：{source}")]
-    SessionsUnreadable {
-        path: String,
-        source: std::io::Error,
-    },
-}
 
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -56,37 +43,32 @@ struct ParsedSession {
     first_user_message: Option<String>,
 }
 
-struct ProjectAccumulator {
-    path: String,
-    encoded_directory: String,
-    sessions: Vec<SessionSummary>,
-}
-
-pub fn scan_sessions() -> Result<SessionCatalog, ScanError> {
-    let sessions_root = dirs::home_dir()
-        .ok_or(ScanError::HomeUnavailable)?
-        .join(".claude")
-        .join("projects");
-
+pub fn scan_sessions(home_dir: &Path) -> ProviderScan {
+    let sessions_root = home_dir.join(".claude").join("projects");
     scan_sessions_at(&sessions_root)
 }
 
-fn scan_sessions_at(sessions_root: &Path) -> Result<SessionCatalog, ScanError> {
+fn scan_sessions_at(sessions_root: &Path) -> ProviderScan {
+    let location = sessions_root.display().to_string();
     if !sessions_root.is_dir() {
-        return Err(ScanError::SessionsMissing(
-            sessions_root.display().to_string(),
-        ));
+        return ProviderScan::unavailable(
+            SessionProvider::Claude,
+            location,
+            "Claude 会话目录不存在".to_owned(),
+        );
     }
 
     let mut warnings = Vec::new();
     let desktop_sessions = load_desktop_sessions(&mut warnings);
-    let project_directories =
-        fs::read_dir(sessions_root).map_err(|source| ScanError::SessionsUnreadable {
-            path: sessions_root.display().to_string(),
-            source,
-        })?;
+    let Ok(project_directories) = fs::read_dir(sessions_root) else {
+        return ProviderScan::unavailable(
+            SessionProvider::Claude,
+            location,
+            "Claude 会话目录无法读取".to_owned(),
+        );
+    };
 
-    let mut projects: BTreeMap<String, ProjectAccumulator> = BTreeMap::new();
+    let mut sessions = Vec::new();
     let mut skipped_files = 0_u32;
 
     for project_entry in project_directories.flatten() {
@@ -95,7 +77,6 @@ fn scan_sessions_at(sessions_root: &Path) -> Result<SessionCatalog, ScanError> {
             continue;
         }
 
-        let encoded_directory = project_entry.file_name().to_string_lossy().into_owned();
         let Ok(files) = fs::read_dir(&project_dir) else {
             warnings.push(format!("无法读取项目索引目录：{}", project_dir.display()));
             continue;
@@ -116,19 +97,7 @@ fn scan_sessions_at(sessions_root: &Path) -> Result<SessionCatalog, ScanError> {
 
             let desktop = desktop_sessions.get(session_id);
             match parse_session_file(&path, session_id, desktop) {
-                Ok(session) => {
-                    let project_path = session.project_path.clone();
-                    let key = project_path.to_lowercase();
-                    projects
-                        .entry(key)
-                        .or_insert_with(|| ProjectAccumulator {
-                            path: project_path,
-                            encoded_directory: encoded_directory.clone(),
-                            sessions: Vec::new(),
-                        })
-                        .sessions
-                        .push(session);
-                }
+                Ok(session) => sessions.push(session),
                 Err(_) => skipped_files += 1,
             }
         }
@@ -138,54 +107,7 @@ fn scan_sessions_at(sessions_root: &Path) -> Result<SessionCatalog, ScanError> {
         warnings.push(format!("有 {skipped_files} 个会话文件无法解析，已跳过"));
     }
 
-    let mut project_summaries: Vec<ProjectSummary> = projects
-        .into_values()
-        .map(|mut project| {
-            project.sessions.sort_by(|left, right| {
-                right
-                    .last_activity
-                    .cmp(&left.last_activity)
-                    .then_with(|| left.title.cmp(&right.title))
-            });
-
-            let last_activity = project
-                .sessions
-                .first()
-                .map(|session| session.last_activity.clone())
-                .unwrap_or_default();
-            let total_size = project
-                .sessions
-                .iter()
-                .map(|session| session.file_size)
-                .sum();
-            let name = project_name(&project.path);
-
-            ProjectSummary {
-                id: project.path.to_lowercase(),
-                name,
-                path: project.path,
-                encoded_directory: project.encoded_directory,
-                last_activity,
-                session_count: project.sessions.len(),
-                total_size,
-                sessions: project.sessions,
-            }
-        })
-        .collect();
-
-    project_summaries.sort_by(|left, right| {
-        right
-            .last_activity
-            .cmp(&left.last_activity)
-            .then_with(|| left.name.cmp(&right.name))
-    });
-
-    Ok(SessionCatalog {
-        projects: project_summaries,
-        scanned_at: format_timestamp(Utc::now()),
-        sessions_root: sessions_root.display().to_string(),
-        warnings,
-    })
+    ProviderScan::available(SessionProvider::Claude, location, sessions, warnings)
 }
 
 fn parse_session_file(
@@ -233,18 +155,21 @@ fn parse_session_file(
 
     Ok(SessionSummary {
         id: session_id.to_owned(),
+        provider: SessionProvider::Claude,
         title,
         title_source,
         project_path,
-        file_path: path.display().to_string(),
+        source_path: path.display().to_string(),
+        source_detail: Some("Claude Code JSONL".to_owned()),
         created_at,
         last_activity: format_timestamp(last_activity),
-        message_count: parsed.message_count,
+        message_count: Some(u64::from(parsed.message_count)),
+        tokens_used: None,
         branch: parsed.branch,
         model: desktop
             .and_then(|record| record.model.clone())
             .or(parsed.model),
-        claude_version: parsed.claude_version,
+        cli_version: parsed.claude_version,
         file_size: metadata.len(),
         is_archived: desktop.is_some_and(|record| record.is_archived),
         can_resume,
@@ -451,15 +376,6 @@ fn collect_json_files(directory: &Path, depth: usize, output: &mut Vec<PathBuf>)
     }
 }
 
-fn project_name(path: &str) -> String {
-    Path::new(path)
-        .file_name()
-        .and_then(|value| value.to_str())
-        .filter(|value| !value.is_empty())
-        .unwrap_or(path)
-        .to_owned()
-}
-
 fn format_timestamp(timestamp: DateTime<Utc>) -> String {
     timestamp.to_rfc3339_opts(SecondsFormat::Secs, true)
 }
@@ -511,7 +427,7 @@ mod tests {
 
     #[test]
     fn scans_a_fixture_catalog_end_to_end() {
-        let root = env::temp_dir().join(format!("claude-session-manager-{}", Uuid::new_v4()));
+        let root = env::temp_dir().join(format!("ccsm-{}", Uuid::new_v4()));
         let project_directory = root.join("C--code-demo");
         fs::create_dir_all(&project_directory).expect("create fixture directory");
         let session_id = Uuid::new_v4().to_string();
@@ -536,13 +452,14 @@ mod tests {
         )
         .expect("write fixture session");
 
-        let catalog = scan_sessions_at(&root).expect("scan fixture catalog");
+        let scan = scan_sessions_at(&root);
 
-        assert_eq!(catalog.projects.len(), 1);
-        assert_eq!(catalog.projects[0].sessions.len(), 1);
-        let session = &catalog.projects[0].sessions[0];
+        assert!(scan.source.available);
+        assert_eq!(scan.sessions.len(), 1);
+        let session = &scan.sessions[0];
+        assert_eq!(session.provider, SessionProvider::Claude);
         assert_eq!(session.title, "检查临时会话目录");
-        assert_eq!(session.message_count, 2);
+        assert_eq!(session.message_count, Some(2));
         assert!(session.can_resume);
 
         fs::remove_dir_all(root).expect("remove fixture directory");

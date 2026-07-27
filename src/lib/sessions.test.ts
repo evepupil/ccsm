@@ -5,16 +5,19 @@ import { selectVisibleSessions } from "./sessions";
 
 const baseSession: SessionSummary = {
   id: "00000000-0000-4000-8000-000000000001",
+  provider: "claude",
   title: "实现会话管理器",
   titleSource: "summary",
   projectPath: "C:\\code\\manager",
-  filePath: "session.jsonl",
+  sourcePath: "session.jsonl",
+  sourceDetail: "Claude Code JSONL",
   createdAt: "2026-07-26T06:00:00Z",
   lastActivity: "2026-07-27T06:00:00Z",
   messageCount: 8,
+  tokensUsed: null,
   branch: "main",
   model: "claude-sonnet",
-  claudeVersion: "2.1.217",
+  cliVersion: "2.1.217",
   fileSize: 1024,
   isArchived: false,
   canResume: true,
@@ -25,10 +28,10 @@ const projects: ProjectSummary[] = [
     id: "manager",
     name: "manager",
     path: "C:\\code\\manager",
-    encodedDirectory: "C--code-manager",
     lastActivity: baseSession.lastActivity,
     sessionCount: 2,
     totalSize: 2048,
+    providers: ["claude"],
     sessions: [
       baseSession,
       {
@@ -44,17 +47,20 @@ const projects: ProjectSummary[] = [
     id: "edgedisk",
     name: "EdgeDisk",
     path: "C:\\code\\EdgeDisk",
-    encodedDirectory: "C--code-EdgeDisk",
     lastActivity: "2026-07-25T06:00:00Z",
     sessionCount: 1,
     totalSize: 512,
+    providers: ["codex"],
     sessions: [
       {
         ...baseSession,
         id: "00000000-0000-4000-8000-000000000003",
         title: "对象存储优化",
+        provider: "codex",
         projectPath: "C:\\code\\EdgeDisk",
         lastActivity: "2026-07-25T06:00:00Z",
+        messageCount: null,
+        tokensUsed: 12_000,
       },
     ],
   },
@@ -66,6 +72,7 @@ describe("selectVisibleSessions", () => {
       projects,
       selectedProjectId: "manager",
       searchQuery: "",
+      providerFilter: "all",
       showArchived: false,
       sort: "recent",
     });
@@ -78,6 +85,7 @@ describe("selectVisibleSessions", () => {
       projects,
       selectedProjectId: "manager",
       searchQuery: "EdgeDisk",
+      providerFilter: "all",
       showArchived: false,
       sort: "recent",
     });
@@ -90,10 +98,24 @@ describe("selectVisibleSessions", () => {
       projects,
       selectedProjectId: "manager",
       searchQuery: "",
+      providerFilter: "all",
       showArchived: true,
       sort: "title",
     });
 
     expect(result.map((session) => session.title)).toEqual(["旧的归档记录", "实现会话管理器"]);
+  });
+
+  it("filters sessions by provider", () => {
+    const result = selectVisibleSessions({
+      projects,
+      selectedProjectId: "edgedisk",
+      searchQuery: "",
+      providerFilter: "codex",
+      showArchived: false,
+      sort: "recent",
+    });
+
+    expect(result.map((session) => session.provider)).toEqual(["codex"]);
   });
 });

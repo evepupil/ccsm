@@ -1,6 +1,7 @@
 import {
   Archive,
   Copy,
+  Gauge,
   GitBranch,
   GitFork,
   MessageSquare,
@@ -11,6 +12,7 @@ import {
 import {
   formatAbsoluteTime,
   formatBytes,
+  formatCount,
   formatRelativeTime,
   titleSourceLabel,
 } from "../lib/format";
@@ -18,14 +20,14 @@ import type { SessionSummary } from "../types";
 
 interface SessionTableProps {
   sessions: SessionSummary[];
-  launchingSessionId: string | null;
+  launchingSessionKey: string | null;
   onResume: (session: SessionSummary, fork: boolean) => void;
   onCopyId: (sessionId: string) => void;
 }
 
 export function SessionTable({
   sessions,
-  launchingSessionId,
+  launchingSessionKey,
   onResume,
   onCopyId,
 }: SessionTableProps) {
@@ -52,15 +54,19 @@ export function SessionTable({
         </thead>
         <tbody>
           {sessions.map((session) => {
-            const launching = launchingSessionId === session.id;
+            const sessionKey = `${session.provider}:${session.id}`;
+            const launching = launchingSessionKey === sessionKey;
             return (
-              <tr key={session.id}>
+              <tr key={sessionKey}>
                 <td>
                   <div className="session-title-line">
                     <strong title={session.title}>{session.title}</strong>
                     {session.isArchived && <Archive size={13} aria-label="已归档" />}
                   </div>
                   <div className="session-id-line">
+                    <span className={`provider-badge ${session.provider}`}>
+                      {session.provider === "claude" ? "Claude" : "Codex"}
+                    </span>
                     <code title={session.id}>{session.id}</code>
                     <button
                       className="icon-button compact"
@@ -85,9 +91,16 @@ export function SessionTable({
                 </td>
                 <td>
                   <div className="metadata-line">
-                    <span title="消息记录数">
-                      <MessageSquare size={13} /> {session.messageCount}
-                    </span>
+                    {session.messageCount !== null && (
+                      <span title="消息记录数">
+                        <MessageSquare size={13} /> {formatCount(session.messageCount)} 条消息
+                      </span>
+                    )}
+                    {session.tokensUsed !== null && (
+                      <span title="累计 Token 数">
+                        <Gauge size={13} /> {formatCount(session.tokensUsed)} Token
+                      </span>
+                    )}
                     <span title="会话文件大小">{formatBytes(session.fileSize)}</span>
                   </div>
                   <div className="metadata-line subdued">
@@ -96,7 +109,8 @@ export function SessionTable({
                         <GitBranch size={13} /> {session.branch}
                       </span>
                     )}
-                    <span>{session.model ?? session.claudeVersion ?? "版本未知"}</span>
+                    <span>{session.model ?? session.cliVersion ?? "版本未知"}</span>
+                    {session.sourceDetail && <span>{session.sourceDetail}</span>}
                   </div>
                 </td>
                 <td>
