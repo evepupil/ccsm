@@ -72,7 +72,7 @@ describe("selectVisibleSessions", () => {
       projects,
       selectedProjectId: "manager",
       searchQuery: "",
-      providerFilter: "all",
+      providerFilter: "claude",
       showArchived: false,
       sort: "recent",
     });
@@ -85,7 +85,7 @@ describe("selectVisibleSessions", () => {
       projects,
       selectedProjectId: "manager",
       searchQuery: "EdgeDisk",
-      providerFilter: "all",
+      providerFilter: "codex",
       showArchived: false,
       sort: "recent",
     });
@@ -98,7 +98,7 @@ describe("selectVisibleSessions", () => {
       projects,
       selectedProjectId: "manager",
       searchQuery: "",
-      providerFilter: "all",
+      providerFilter: "claude",
       showArchived: true,
       sort: "title",
     });

@@ -10,16 +10,14 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { getCliStatuses, resumeSession, scanSessionCatalog } from "./api";
-import { ProjectTree } from "./components/ProjectTree";
+import { resumeSession, scanSessionCatalog } from "./api";
+import { ProjectList } from "./components/ProjectTree";
 import { SessionTable } from "./components/SessionTable";
 import { formatAbsoluteTime, normalizeSearch } from "./lib/format";
 import { highestPermissionWarning, launchSessionKey } from "./lib/launch";
 import { selectVisibleSessions } from "./lib/sessions";
 import type {
-  CliStatus,
   ProjectSummary,
-  ProviderFilter,
   SessionProvider,
   SessionSort,
   SessionSummary,
@@ -34,12 +32,11 @@ export default function App() {
   const [catalog, setCatalog] = useState<Awaited<ReturnType<typeof scanSessionCatalog>> | null>(
     null,
   );
-  const [cliStatuses, setCliStatuses] = useState<CliStatus[]>([]);
+  const [provider, setProvider] = useState<SessionProvider>("claude");
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() =>
     localStorage.getItem("selectedProjectId"),
   );
   const [searchQuery, setSearchQuery] = useState("");
-  const [providerFilter, setProviderFilter] = useState<ProviderFilter>("all");
   const [sort, setSort] = useState<SessionSort>("recent");
   const [showArchived, setShowArchived] = useState(false);
   const [highestPermissions, setHighestPermissions] = useState(false);
@@ -52,12 +49,8 @@ export default function App() {
     setLoading(true);
     setError(null);
     try {
-      const [nextCatalog, nextCliStatuses] = await Promise.all([
-        scanSessionCatalog(),
-        getCliStatuses(),
-      ]);
+      const nextCatalog = await scanSessionCatalog();
       setCatalog(nextCatalog);
-      setCliStatuses(nextCliStatuses);
       setSelectedProjectId((current) => {
         const stillExists = nextCatalog.projects.some((project) => project.id === current);
         const nextId = stillExists ? current : (nextCatalog.projects[0]?.id ?? null);
@@ -87,11 +80,11 @@ export default function App() {
         projects: catalog?.projects ?? [],
         selectedProjectId,
         searchQuery,
-        providerFilter,
+        providerFilter: provider,
         showArchived,
         sort,
       }),
-    [catalog, providerFilter, searchQuery, selectedProjectId, showArchived, sort],
+    [catalog, provider, searchQuery, selectedProjectId, showArchived, sort],
   );
   const sessionCount =
     catalog?.projects.reduce((total, project) => total + project.sessionCount, 0) ?? 0;
@@ -103,20 +96,13 @@ export default function App() {
     if (searchQuery) setSearchQuery("");
   }
 
-  function changeProviderFilter(nextFilter: ProviderFilter) {
-    setProviderFilter(nextFilter);
+  function switchProvider(next: SessionProvider) {
+    setProvider(next);
     setSelectedProjectId((current) => {
       const projects = catalog?.projects ?? [];
       const currentProject = projects.find((project) => project.id === current);
-      if (
-        currentProject &&
-        (nextFilter === "all" || currentProject.providers.includes(nextFilter))
-      ) {
-        return current;
-      }
-      const nextId =
-        projects.find((project) => nextFilter === "all" || project.providers.includes(nextFilter))
-          ?.id ?? null;
+      if (currentProject && currentProject.providers.includes(next)) return current;
+      const nextId = projects.find((project) => project.providers.includes(next))?.id ?? null;
       if (nextId) localStorage.setItem("selectedProjectId", nextId);
       return nextId;
     });
@@ -196,7 +182,21 @@ export default function App() {
         </label>
 
         <div className="header-tools">
-          <CliIndicators statuses={cliStatuses} />
+          <div className="provider-tabs" role="tablist" aria-label="会话来源切换">
+            {(["claude", "codex"] as const).map((p) => (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={provider === p}
+                key={p}
+                className={`provider-tab${provider === p ? " active" : ""}`}
+                onClick={() => switchProvider(p)}
+              >
+                <span className={`provider-dot ${p}`} />
+                {providerLabel(p)}
+              </button>
+            ))}
+          </div>
           <button
             className="icon-button"
             type="button"
@@ -211,11 +211,11 @@ export default function App() {
       </header>
 
       <div className="workspace">
-        <ProjectTree
+        <ProjectList
           projects={catalog?.projects ?? []}
           selectedProjectId={selectedProjectId}
           searchQuery={searchQuery}
-          providerFilter={providerFilter}
+          provider={provider}
           onSelectProject={selectProject}
         />
 
@@ -225,11 +225,9 @@ export default function App() {
               selectedProject={selectedProject}
               searching={Boolean(normalizedQuery)}
               resultCount={sessions.length}
-              providerFilter={providerFilter}
               sort={sort}
               showArchived={showArchived}
               highestPermissions={highestPermissions}
-              onProviderFilterChange={changeProviderFilter}
               onSortChange={setSort}
               onShowArchivedChange={setShowArchived}
               onHighestPermissionsChange={setHighestPermissions}
@@ -294,11 +292,9 @@ interface SessionToolbarProps {
   selectedProject: ProjectSummary | null;
   searching: boolean;
   resultCount: number;
-  providerFilter: ProviderFilter;
   sort: SessionSort;
   showArchived: boolean;
   highestPermissions: boolean;
-  onProviderFilterChange: (filter: ProviderFilter) => void;
   onSortChange: (sort: SessionSort) => void;
   onShowArchivedChange: (show: boolean) => void;
   onHighestPermissionsChange: (enabled: boolean) => void;
@@ -308,11 +304,9 @@ function SessionToolbar({
   selectedProject,
   searching,
   resultCount,
-  providerFilter,
   sort,
   showArchived,
   highestPermissions,
-  onProviderFilterChange,
   onSortChange,
   onShowArchivedChange,
   onHighestPermissionsChange,
@@ -326,18 +320,6 @@ function SessionToolbar({
         </p>
       </div>
       <div className="view-controls">
-        <div className="segmented-control provider-filter" aria-label="会话来源">
-          {(["all", "claude", "codex"] as const).map((provider) => (
-            <button
-              type="button"
-              key={provider}
-              className={providerFilter === provider ? "active" : ""}
-              onClick={() => onProviderFilterChange(provider)}
-            >
-              {provider === "all" ? "全部" : providerLabel(provider)}
-            </button>
-          ))}
-        </div>
         <label className={`permission-toggle${highestPermissions ? " enabled" : ""}`}>
           <input
             type="checkbox"
@@ -357,14 +339,14 @@ function SessionToolbar({
         <div className="segmented-control sort-control" aria-label="会话排序方式">
           <button
             type="button"
-            className={sort === "recent" ? "active" : ""}
+            className={sort === "recent" ? " active" : ""}
             onClick={() => onSortChange("recent")}
           >
             最近活动
           </button>
           <button
             type="button"
-            className={sort === "title" ? "active" : ""}
+            className={sort === "title" ? " active" : ""}
             onClick={() => onSortChange("title")}
           >
             标题
@@ -375,46 +357,8 @@ function SessionToolbar({
   );
 }
 
-function CliIndicators({ statuses }: { statuses: CliStatus[] }) {
-  return (
-    <div className="cli-indicators">
-      {(["claude", "codex"] as const).map((provider) => (
-        <CliIndicator
-          key={provider}
-          provider={provider}
-          status={statuses.find((status) => status.provider === provider) ?? null}
-        />
-      ))}
-    </div>
-  );
-}
-
-function CliIndicator({
-  provider,
-  status,
-}: {
-  provider: SessionProvider;
-  status: CliStatus | null;
-}) {
-  const label = providerLabel(provider);
-  if (!status) return <span className="cli-indicator neutral">{label} 检测中</span>;
-  if (!status.available) return <span className="cli-indicator error">{label} 未安装</span>;
-  if (status.loggedIn === false) {
-    return (
-      <span className="cli-indicator warning" title="新终端可能要求登录或配置 API">
-        {label} 未登录
-      </span>
-    );
-  }
-  return (
-    <span className="cli-indicator ready" title={status.version ?? undefined}>
-      {label} 就绪
-    </span>
-  );
-}
-
 function providerLabel(provider: SessionProvider): string {
-  return provider === "claude" ? "Claude" : "Codex";
+  return provider === "claude" ? "Claude Code" : "Codex";
 }
 
 function toErrorMessage(cause: unknown): string {

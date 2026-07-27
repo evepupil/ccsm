@@ -46,15 +46,6 @@ export interface SessionSummary {
   canResume: boolean;
 }
 
-export interface CliStatus {
-  provider: SessionProvider;
-  available: boolean;
-  version: string | null;
-  loggedIn: boolean | null;
-  authMethod: string | null;
-  apiProvider: string | null;
-}
-
 export interface LaunchResult {
   sessionId: string;
   provider: SessionProvider;
@@ -64,4 +55,3 @@ export interface LaunchResult {
 }
 
 export type SessionSort = "recent" | "title";
-export type ProviderFilter = "all" | SessionProvider;
