@@ -68,7 +68,7 @@ export function SessionTable({
                 key={sessionKey}
                 className="border-b border-border hover:bg-surface-secondary"
               >
-                <td className="h-[70px] px-3 align-middle">
+                <Table.Cell className="h-[70px] px-3 align-middle">
                   <div className="flex min-w-0 items-center gap-1.5">
                     <strong
                       className="truncate text-[12px] font-semibold text-foreground"
@@ -111,8 +111,8 @@ export function SessionTable({
                     </Button>
                     <span className="truncate">{titleSourceLabel(session.titleSource)}</span>
                   </div>
-                </td>
-                <td className="h-[70px] px-3 align-middle">
+                </Table.Cell>
+                <Table.Cell className="h-[70px] px-3 align-middle">
                   <time
                     dateTime={session.lastActivity}
                     title={formatAbsoluteTime(session.lastActivity)}
@@ -123,8 +123,8 @@ export function SessionTable({
                   <small className="mt-1 block text-[10px] text-muted">
                     {formatAbsoluteTime(session.lastActivity)}
                   </small>
-                </td>
-                <td className="h-[70px] px-3 align-middle">
+                </Table.Cell>
+                <Table.Cell className="h-[70px] px-3 align-middle">
                   <div className="flex items-center gap-2.5 text-[11px] text-foreground">
                     {session.messageCount !== null && (
                       <span
@@ -165,8 +165,8 @@ export function SessionTable({
                       <span className="truncate">{session.sourceDetail}</span>
                     )}
                   </div>
-                </td>
-                <td className="h-[70px] px-3 align-middle">
+                </Table.Cell>
+                <Table.Cell className="h-[70px] px-3 align-middle">
                   <div className="flex items-center justify-end gap-1.5">
                     <Button
                       variant="primary"
@@ -190,7 +190,7 @@ export function SessionTable({
                       <GitFork size={16} />
                     </Button>
                   </div>
-                </td>
+                </Table.Cell>
               </Table.Row>
             );
           })}
