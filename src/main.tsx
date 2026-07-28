@@ -14,9 +14,10 @@ if (!root) {
 function Root() {
   useSystemTheme();
   return (
-    <ToastProvider placement="bottom end">
+    <>
       <App />
-    </ToastProvider>
+      <ToastProvider placement="bottom end" />
+    </>
   );
 }
 
