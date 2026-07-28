@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CCSM UI Redesign Prototype</title>
+    <link rel="stylesheet" href="styles/tokens.css" />
+    <link rel="stylesheet" href="styles/layout.css" />
+    <link rel="stylesheet" href="styles/components.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand" aria-label="CCSM">
+          <span class="brand-mark" aria-hidden="true">
+            <i data-lucide="square-terminal"></i>
+          </span>
+          <span class="brand-copy">
+            <strong>CCSM</strong>
+            <small id="total-session-count">0 条本机会话</small>
+          </span>
+        </div>
+
+        <label class="search-field">
+          <i data-lucide="search" aria-hidden="true"></i>
+          <input
+            id="session-search"
+            type="search"
+            placeholder="搜索标题、项目、分支或 Session ID"
+            autocomplete="off"
+          />
+          <button id="clear-search" class="icon-button search-clear" type="button" title="清空搜索">
+            <i data-lucide="x" aria-hidden="true"></i>
+            <span class="sr-only">清空搜索</span>
+          </button>
+        </label>
+
+        <div class="topbar-actions">
+          <div class="provider-tabs" role="tablist" aria-label="会话来源">
+            <button class="provider-tab" type="button" role="tab" data-provider="claude">
+              <span class="provider-dot provider-dot-claude" aria-hidden="true"></span>
+              Claude Code
+            </button>
+            <button class="provider-tab" type="button" role="tab" data-provider="codex">
+              <span class="provider-dot provider-dot-codex" aria-hidden="true"></span>
+              Codex
+            </button>
+          </div>
+          <button
+            id="refresh-button"
+            class="icon-button refresh-button"
+            type="button"
+            title="重新扫描"
+          >
+            <i data-lucide="refresh-cw" aria-hidden="true"></i>
+            <span class="sr-only">重新扫描</span>
+          </button>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <aside class="project-sidebar" aria-label="项目列表">
+          <div class="sidebar-heading">
+            <span>项目</span>
+            <span id="project-count" class="count-label">0</span>
+          </div>
+          <nav id="project-list" class="project-list" aria-label="项目列表"></nav>
+        </aside>
+
+        <main class="session-workspace">
+          <section class="workspace-heading">
+            <div class="project-heading">
+              <div class="heading-line">
+                <h1 id="workspace-title">选择一个项目</h1>
+                <span id="workspace-count" class="session-count-badge">0 条</span>
+              </div>
+              <p id="workspace-path"></p>
+            </div>
+
+            <div class="session-controls">
+              <label class="sort-control">
+                <i data-lucide="arrow-up-down" aria-hidden="true"></i>
+                <span class="sr-only">排序方式</span>
+                <select id="sort-select" aria-label="排序方式">
+                  <option value="recent">最近活动</option>
+                  <option value="title">标题</option>
+                </select>
+              </label>
+
+              <label class="switch-field">
+                <input id="archived-toggle" type="checkbox" role="switch" />
+                <span class="switch-track" aria-hidden="true"
+                  ><span class="switch-thumb"></span
+                ></span>
+                <span>显示归档</span>
+              </label>
+
+              <label class="switch-field permission-switch">
+                <input id="permission-toggle" type="checkbox" role="switch" />
+                <span class="switch-track" aria-hidden="true"
+                  ><span class="switch-thumb"></span
+                ></span>
+                <i data-lucide="shield" aria-hidden="true"></i>
+                <span>最高权限</span>
+              </label>
+            </div>
+          </section>
+
+          <div id="permission-warning" class="permission-warning" role="status" hidden>
+            <i data-lucide="shield-alert" aria-hidden="true"></i>
+            <span>续接时将跳过 CLI 权限确认，请只在可信项目中使用。</span>
+          </div>
+
+          <section class="session-panel" aria-label="会话列表">
+            <div class="session-table-header" aria-hidden="true">
+              <span>会话</span>
+              <span class="activity-heading">最近活动</span>
+              <span class="action-heading">操作</span>
+            </div>
+            <div id="session-list" class="session-list"></div>
+          </section>
+        </main>
+      </div>
+
+      <footer class="statusbar">
+        <span class="source-status">
+          <i data-lucide="database" aria-hidden="true"></i>
+          <span id="source-summary"></span>
+        </span>
+        <span id="scan-status">上次扫描：刚刚</span>
+      </footer>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="scripts/mock-data.js"></script>
+    <script src="scripts/prototype.js"></script>
+  </body>
+</html>
