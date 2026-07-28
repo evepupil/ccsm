@@ -8,13 +8,13 @@
  * Button variant="primary" 等强调控件会跟随；hover / soft 等派生色由 HeroUI 基于 --accent 自动 color-mix。
  */
 :root {
-  --accent: #167d63;
+  --accent: #14745c;
   --accent-foreground: #ffffff;
 }
 
 .dark {
-  --accent: #2fa47e;
-  --accent-foreground: #172026;
+  --accent: #42ad8b;
+  --accent-foreground: #10251f;
 }
 
 :root {
@@ -44,5 +44,18 @@ body,
 }
 
 body {
+  min-width: 760px;
   overflow: hidden;
+  font-size: 13px;
+}
+
+button,
+input,
+select {
+  letter-spacing: 0;
+}
+
+* {
+  scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
+  scrollbar-width: thin;
 }

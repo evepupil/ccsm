@@ -8,6 +8,6 @@
 | <a id="m1"></a>M1 | 增加 Codex 索引、双来源合并和最高权限续接             | 进行中 | M0、Codex `state_*.sqlite`、Codex CLI  | [Codex 会话索引](模块设计/Codex会话索引.md)、[多源启动与权限模式](模块设计/多源启动与权限模式.md) | Claude 与 Codex 按项目合并；来源筛选可用；两种 CLI 的续接、分叉和最高权限参数正确；完整门禁与 Windows release 构建通过；人工确认一次双来源续接 |
 | <a id="m2"></a>M2 | 前端 UI 体系迁移到 HeroUI（Tailwind v4 + React Aria） | 进行中 | M0、HeroUI v3、Tailwind v4             | [前端界面与主题](模块设计/前端界面与主题.md)                                                      | App/侧栏/表格全量改用 HeroUI；品牌色与暗色跟随系统；tsc 严格/vitest/vite build 通过；视觉与交互人工回归确认                                    |
 
-当前进度：M0 的 Claude 基础功能已经落地；M1 的 Codex SQLite 只读索引、统一项目树、双 CLI 检测、来源筛选和最高权限启动已实现。格式检查、TypeScript 严格检查、前端 12 项单测、Clippy 零警告、Rust 11 项单测、Vite 生产构建、Tauri release 构建和 NSIS 打包均已通过。`v0.2.0` 产物已生成，剩余退出项为人工打开 release 窗口并各确认一次 Claude 与 Codex 续接。
+当前进度：M0 的 Claude 基础功能已经落地；M1 的 Codex SQLite 只读索引、统一项目树、双 CLI 检测、来源筛选和最高权限启动已实现。格式检查、TypeScript 严格检查、前端 14 项单测、Clippy 零警告、Rust 11 项单测、Vite 生产构建、Tauri release 构建和 NSIS 打包均已通过。`v0.2.0` 产物已生成，剩余退出项为人工打开 release 窗口并各确认一次 Claude 与 Codex 续接。
 
-M2 已完成 HeroUI v3 + Tailwind v4 引入与 `App` / `ProjectTree` / `SessionTable` 全量重写，品牌色与暗色桥接就位，tsc 严格、vitest、vite build 均通过；剩余退出项为人工启动 dev 做视觉与交互回归。
+M2 已按确认原型完成生产前端重构：左侧直接铺项目，右上角 Claude Code / Codex Tab 联动两侧列表；页面拆为独立组件和状态 hook，并修复项目点击、Switch 外观、窄窗口挤压和操作列布局。release 窗口已完成人工视觉与交互回归，最高权限开关仍保留一次用户侧人工确认。

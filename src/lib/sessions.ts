@@ -10,6 +10,42 @@ interface SessionFilter {
   sort: SessionSort;
 }
 
+interface ProjectFilter {
+  projects: ProjectSummary[];
+  provider: SessionProvider;
+  searchQuery: string;
+}
+
+export function selectVisibleProjects({
+  projects,
+  provider,
+  searchQuery,
+}: ProjectFilter): ProjectSummary[] {
+  const normalizedQuery = normalizeSearch(searchQuery);
+
+  return projects.filter((project) => {
+    if (!project.providers.includes(provider)) return false;
+    if (!normalizedQuery) return true;
+
+    const projectText = `${project.name} ${project.path}`.toLocaleLowerCase("zh-CN");
+    if (projectText.includes(normalizedQuery)) return true;
+
+    return project.sessions.some((session) => {
+      if (session.provider !== provider) return false;
+      const sessionText = [
+        session.title,
+        session.id,
+        session.branch ?? "",
+        session.model ?? "",
+        session.sourceDetail ?? "",
+      ]
+        .join(" ")
+        .toLocaleLowerCase("zh-CN");
+      return sessionText.includes(normalizedQuery);
+    });
+  });
+}
+
 export function selectVisibleSessions({
   projects,
   selectedProjectId,

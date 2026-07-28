@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { ProjectSummary, SessionSummary } from "../types";
-import { selectVisibleSessions } from "./sessions";
+import { selectVisibleProjects, selectVisibleSessions } from "./sessions";
 
 const baseSession: SessionSummary = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -117,5 +117,35 @@ describe("selectVisibleSessions", () => {
     });
 
     expect(result.map((session) => session.provider)).toEqual(["codex"]);
+  });
+});
+
+describe("selectVisibleProjects", () => {
+  it("changes the project list with the provider", () => {
+    expect(
+      selectVisibleProjects({ projects, provider: "claude", searchQuery: "" }).map(
+        (project) => project.id,
+      ),
+    ).toEqual(["manager"]);
+    expect(
+      selectVisibleProjects({ projects, provider: "codex", searchQuery: "" }).map(
+        (project) => project.id,
+      ),
+    ).toEqual(["edgedisk"]);
+  });
+
+  it("keeps projects whose provider sessions match the search", () => {
+    const result = selectVisibleProjects({
+      projects,
+      provider: "codex",
+      searchQuery: "12_000",
+    });
+
+    expect(result).toEqual([]);
+    expect(
+      selectVisibleProjects({ projects, provider: "codex", searchQuery: "对象存储" }).map(
+        (project) => project.id,
+      ),
+    ).toEqual(["edgedisk"]);
   });
 });
