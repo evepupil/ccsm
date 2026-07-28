@@ -8,6 +8,7 @@ import {
   Play,
   TerminalSquare,
 } from "lucide-react";
+import { Button, EmptyState, Table } from "@heroui/react";
 
 import {
   formatAbsoluteTime,
@@ -33,115 +34,168 @@ export function SessionTable({
 }: SessionTableProps) {
   if (sessions.length === 0) {
     return (
-      <div className="empty-state">
+      <EmptyState className="flex min-h-[240px] flex-col items-center justify-center p-8 text-center text-muted">
         <MessageSquare size={26} />
-        <h2>没有可显示的会话</h2>
-        <p>调整搜索条件或打开“显示归档”。</p>
-      </div>
+        <h2 className="m-0 mt-3 text-[15px] font-bold text-foreground">没有可显示的会话</h2>
+        <p className="mt-1.5 text-[12px] text-muted">调整搜索条件或打开“显示归档”。</p>
+      </EmptyState>
     );
   }
 
   return (
-    <div className="session-table-wrap">
-      <table className="session-table">
-        <thead>
-          <tr>
-            <th>会话</th>
-            <th>最近活动</th>
-            <th>上下文</th>
-            <th className="actions-column">操作</th>
-          </tr>
-        </thead>
-        <tbody>
+    <div className="min-h-0 min-w-0 flex-1 overflow-auto">
+      <Table className="min-w-[760px] text-[12px]">
+        <Table.Header>
+          <Table.Column className="sticky top-0 z-[2] h-[34px] w-[39%] bg-surface-secondary px-3 text-[10px] font-bold uppercase text-muted">
+            会话
+          </Table.Column>
+          <Table.Column className="sticky top-0 z-[2] h-[34px] w-[17%] bg-surface-secondary px-3 text-[10px] font-bold uppercase text-muted">
+            最近活动
+          </Table.Column>
+          <Table.Column className="sticky top-0 z-[2] h-[34px] w-[25%] bg-surface-secondary px-3 text-[10px] font-bold uppercase text-muted">
+            上下文
+          </Table.Column>
+          <Table.Column className="sticky top-0 z-[2] h-[34px] w-[138px] bg-surface-secondary px-3 text-[10px] font-bold uppercase text-muted">
+            操作
+          </Table.Column>
+        </Table.Header>
+        <Table.Body>
           {sessions.map((session) => {
             const sessionKey = `${session.provider}:${session.id}`;
             const launching = launchingSessionKey === sessionKey;
             return (
-              <tr key={sessionKey}>
-                <td>
-                  <div className="session-title-line">
-                    <strong title={session.title}>{session.title}</strong>
-                    {session.isArchived && <Archive size={13} aria-label="已归档" />}
+              <Table.Row
+                key={sessionKey}
+                className="border-b border-border hover:bg-surface-secondary"
+              >
+                <td className="h-[70px] px-3 align-middle">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <strong
+                      className="truncate text-[12px] font-semibold text-foreground"
+                      title={session.title}
+                    >
+                      {session.title}
+                    </strong>
+                    {session.isArchived && (
+                      <Archive
+                        size={13}
+                        className="flex-[0_0_auto] text-warning"
+                        aria-label="已归档"
+                      />
+                    )}
                   </div>
-                  <div className="session-id-line">
-                    <span className={`provider-badge ${session.provider}`}>
+                  <div className="mt-1.5 flex min-w-0 items-center gap-1 text-[10px] text-muted">
+                    <span
+                      className={`inline-flex flex-[0_0_auto] items-center rounded px-1.5 py-0.5 font-bold ${
+                        session.provider === "claude"
+                          ? "bg-[#f8e7df] text-[#8c3b1c] dark:bg-[#4b2c20] dark:text-[#f1b293]"
+                          : "bg-[#e3eef9] text-[#205b9e] dark:bg-[#20394f] dark:text-[#9bc6ef]"
+                      }`}
+                    >
                       {session.provider === "claude" ? "Claude" : "Codex"}
                     </span>
-                    <code title={session.id}>{session.id}</code>
-                    <button
-                      className="icon-button compact"
-                      type="button"
-                      title="复制 Session ID"
+                    <code
+                      className="max-w-[120px] truncate font-mono text-muted"
+                      title={session.id}
+                    >
+                      {session.id}
+                    </code>
+                    <Button
+                      isIconOnly
+                      variant="ghost"
+                      size="sm"
                       aria-label="复制 Session ID"
-                      onClick={() => onCopyId(session.id)}
+                      onPress={() => onCopyId(session.id)}
                     >
                       <Copy size={13} />
-                    </button>
-                    <span>{titleSourceLabel(session.titleSource)}</span>
+                    </Button>
+                    <span className="truncate">{titleSourceLabel(session.titleSource)}</span>
                   </div>
                 </td>
-                <td>
+                <td className="h-[70px] px-3 align-middle">
                   <time
                     dateTime={session.lastActivity}
                     title={formatAbsoluteTime(session.lastActivity)}
+                    className="block font-semibold text-foreground"
                   >
                     {formatRelativeTime(session.lastActivity)}
                   </time>
-                  <small>{formatAbsoluteTime(session.lastActivity)}</small>
+                  <small className="mt-1 block text-[10px] text-muted">
+                    {formatAbsoluteTime(session.lastActivity)}
+                  </small>
                 </td>
-                <td>
-                  <div className="metadata-line">
+                <td className="h-[70px] px-3 align-middle">
+                  <div className="flex items-center gap-2.5 text-[11px] text-foreground">
                     {session.messageCount !== null && (
-                      <span title="消息记录数">
+                      <span
+                        title="消息记录数"
+                        className="inline-flex min-w-0 items-center gap-1 truncate"
+                      >
                         <MessageSquare size={13} /> {formatCount(session.messageCount)} 条消息
                       </span>
                     )}
                     {session.tokensUsed !== null && (
-                      <span title="累计 Token 数">
+                      <span
+                        title="累计 Token 数"
+                        className="inline-flex min-w-0 items-center gap-1 truncate"
+                      >
                         <Gauge size={13} /> {formatCount(session.tokensUsed)} Token
                       </span>
                     )}
-                    <span title="会话文件大小">{formatBytes(session.fileSize)}</span>
+                    <span
+                      title="会话文件大小"
+                      className="inline-flex min-w-0 items-center gap-1 truncate"
+                    >
+                      {formatBytes(session.fileSize)}
+                    </span>
                   </div>
-                  <div className="metadata-line subdued">
+                  <div className="mt-1.5 flex items-center gap-2.5 text-[10px] text-muted">
                     {session.branch && (
-                      <span title="Git 分支">
+                      <span
+                        title="Git 分支"
+                        className="inline-flex min-w-0 items-center gap-1 truncate"
+                      >
                         <GitBranch size={13} /> {session.branch}
                       </span>
                     )}
-                    <span>{session.model ?? session.cliVersion ?? "版本未知"}</span>
-                    {session.sourceDetail && <span>{session.sourceDetail}</span>}
+                    <span className="truncate">
+                      {session.model ?? session.cliVersion ?? "版本未知"}
+                    </span>
+                    {session.sourceDetail && (
+                      <span className="truncate">{session.sourceDetail}</span>
+                    )}
                   </div>
                 </td>
-                <td>
-                  <div className="row-actions">
-                    <button
-                      className="resume-button"
-                      type="button"
-                      disabled={!session.canResume || launching}
-                      title={session.canResume ? "在新终端中续接会话" : "原项目目录已不存在"}
-                      onClick={() => onResume(session, false)}
+                <td className="h-[70px] px-3 align-middle">
+                  <div className="flex items-center justify-end gap-1.5">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      isDisabled={!session.canResume || launching}
+                      aria-label={session.canResume ? "在新终端中续接会话" : "原项目目录已不存在"}
+                      onPress={() => onResume(session, false)}
+                      className="w-[78px]"
                     >
                       {launching ? <TerminalSquare size={15} /> : <Play size={15} />}
                       <span>{launching ? "启动中" : "续接"}</span>
-                    </button>
-                    <button
-                      className="icon-button"
-                      type="button"
-                      disabled={!session.canResume || launching}
-                      title="分叉续接，保留原 Session ID"
-                      aria-label="分叉续接"
-                      onClick={() => onResume(session, true)}
+                    </Button>
+                    <Button
+                      isIconOnly
+                      variant="outline"
+                      size="sm"
+                      isDisabled={!session.canResume || launching}
+                      aria-label="分叉续接，保留原 Session ID"
+                      onPress={() => onResume(session, true)}
                     >
                       <GitFork size={16} />
-                    </button>
+                    </Button>
                   </div>
                 </td>
-              </tr>
+              </Table.Row>
             );
           })}
-        </tbody>
-      </table>
+        </Table.Body>
+      </Table>
     </div>
   );
 }
