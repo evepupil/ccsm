@@ -11,3 +11,4 @@ src-tauri/icons/icon.png
 *.log
 *.tsbuildinfo
 .DS_Store
+.claude/

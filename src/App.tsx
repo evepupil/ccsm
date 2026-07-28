@@ -16,12 +16,7 @@ import { SessionTable } from "./components/SessionTable";
 import { formatAbsoluteTime, normalizeSearch } from "./lib/format";
 import { highestPermissionWarning, launchSessionKey } from "./lib/launch";
 import { selectVisibleSessions } from "./lib/sessions";
-import type {
-  ProjectSummary,
-  SessionProvider,
-  SessionSort,
-  SessionSummary,
-} from "./types";
+import type { ProjectSummary, SessionProvider, SessionSort, SessionSummary } from "./types";
 
 interface Notice {
   kind: "success" | "error";
