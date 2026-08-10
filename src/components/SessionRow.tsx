@@ -1,4 +1,4 @@
-import { Archive, Copy, GitFork, LoaderCircle, Play } from "lucide-react";
+import { Archive, Clock3, Copy, GitFork, LoaderCircle, Play } from "lucide-react";
 import { Button, Chip, Table, Tooltip } from "@heroui/react";
 
 import {
@@ -42,9 +42,9 @@ export function SessionRow({
 
   return (
     <Table.Row className="border-b border-border hover:bg-surface-secondary">
-      <Table.Cell className="h-[84px] min-w-0 px-4 py-2 align-middle">
+      <Table.Cell className="h-[88px] min-w-0 px-4 py-2 align-middle">
         <div className="flex min-w-0 items-center gap-1.5">
-          <strong className="truncate text-[13px] font-semibold" title={session.title}>
+          <strong className="truncate text-[14px] font-semibold" title={session.title}>
             {session.title}
           </strong>
           <Chip
@@ -67,7 +67,7 @@ export function SessionRow({
           )}
         </div>
 
-        <div className="mt-1.5 flex min-w-0 items-center overflow-hidden text-[11px] text-muted">
+        <div className="mt-1.5 flex min-w-0 items-center overflow-hidden text-[12px] text-muted">
           {context.map((value, index) => (
             <span
               key={`${index}:${value}`}
@@ -77,12 +77,13 @@ export function SessionRow({
               {value}
             </span>
           ))}
-          <span className="hidden shrink-0 items-center before:mx-1.5 before:content-['·'] max-[1000px]:inline-flex">
+          <span className="hidden shrink-0 items-center gap-1 before:mx-1.5 before:content-['·'] max-[1000px]:inline-flex">
+            <Clock3 size={12} />
             {formatRelativeTime(session.lastActivity)}
           </span>
         </div>
 
-        <div className="mt-1 flex min-w-0 items-center gap-1 text-[10px] text-muted">
+        <div className="mt-1 flex min-w-0 items-center gap-1 text-[11px] text-muted">
           <code className="max-w-[240px] truncate font-mono" title={session.id}>
             {session.id}
           </code>
@@ -103,7 +104,7 @@ export function SessionRow({
         </div>
       </Table.Cell>
 
-      <Table.Cell className="h-[84px] w-[132px] px-3 align-middle max-[1000px]:hidden">
+      <Table.Cell className="h-[88px] w-[132px] px-3 align-middle max-[1000px]:hidden">
         <time
           dateTime={session.lastActivity}
           title={formatAbsoluteTime(session.lastActivity)}
@@ -111,12 +112,12 @@ export function SessionRow({
         >
           {formatRelativeTime(session.lastActivity)}
         </time>
-        <small className="mt-1 block text-[10px] text-muted">
+        <small className="mt-1 block text-[11px] text-muted">
           {formatAbsoluteTime(session.lastActivity)}
         </small>
       </Table.Cell>
 
-      <Table.Cell className="h-[84px] w-[126px] px-3 align-middle">
+      <Table.Cell className="h-[88px] w-[126px] px-3 align-middle">
         <div className="flex items-center justify-end gap-1.5">
           <Button
             variant="primary"

@@ -128,7 +128,9 @@
             aria-current="${selected ? "page" : "false"}"
             title="${escapeHtml(project.path)}"
           >
-            <i data-lucide="folder" aria-hidden="true"></i>
+            <span class="project-icon" aria-hidden="true">
+              <i data-lucide="folder"></i>
+            </span>
             <span class="project-item-copy">
               <strong>${escapeHtml(project.name)}</strong>
               <small>${escapeHtml(project.lastActivity)}</small>

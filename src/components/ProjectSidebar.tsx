@@ -27,12 +27,14 @@ export function ProjectSidebar({
 
   return (
     <aside
-      className="grid min-h-0 grid-rows-[42px_minmax(0,1fr)] border-r border-border bg-surface-secondary"
+      className="grid min-h-0 grid-rows-[44px_minmax(0,1fr)] border-r border-border bg-surface-secondary"
       aria-label="项目列表"
     >
-      <div className="flex items-center justify-between border-b border-border px-[14px] pl-4 text-[11px] font-bold text-muted">
+      <div className="flex items-center justify-between border-b border-border px-[14px] pl-4 text-[12px] font-bold text-muted">
         <span>项目</span>
-        <span className="tabular-nums">{visibleProjects.length}</span>
+        <span className="min-w-6 rounded-full border border-border bg-surface px-1.5 py-0.5 text-center text-[10px] tabular-nums">
+          {visibleProjects.length}
+        </span>
       </div>
 
       {visibleProjects.length === 0 ? (
@@ -48,7 +50,7 @@ export function ProjectSidebar({
             if (nextProjectId !== undefined) onSelectProject(String(nextProjectId));
           }}
           aria-label="项目列表"
-          className="min-h-0 overflow-auto p-1.5"
+          className="min-h-0 overflow-auto p-1.5 [scrollbar-gutter:stable]"
         >
           {visibleProjects.map((project) => {
             const providerSessionCount = project.sessions.filter(
@@ -59,21 +61,25 @@ export function ProjectSidebar({
                 key={project.id}
                 id={project.id}
                 textValue={project.name}
-                className="group flex min-h-[52px] items-center gap-2.5 rounded-md border border-transparent px-2.5 py-1.5 data-[selected]:border-[#b8d7cc] data-[selected]:bg-[#e7f2ee] dark:data-[selected]:border-[#315b4f] dark:data-[selected]:bg-[#213a33]"
+                className="group flex min-h-[56px] items-center gap-2.5 rounded-md border border-transparent px-2.5 py-1.5 data-[selected]:border-[#b8d7cc] data-[selected]:bg-[#e3f1ec] data-[selected]:shadow-[inset_3px_0_0_var(--accent)] dark:data-[selected]:border-[#315b4f] dark:data-[selected]:bg-[#213a33]"
               >
-                <Folder
-                  size={16}
-                  className="flex-[0_0_16px] text-muted group-data-[selected]:text-accent"
-                />
+                <span className="grid h-7 w-7 flex-[0_0_28px] place-items-center rounded-md border border-border bg-surface text-muted group-data-[selected]:border-accent/25 group-data-[selected]:bg-accent-soft group-data-[selected]:text-accent">
+                  <Folder size={15} />
+                </span>
                 <span className="block min-w-0 flex-1">
-                  <strong className="block truncate text-[12px] font-semibold" title={project.path}>
+                  <strong className="block truncate text-[13px] font-semibold" title={project.path}>
                     {project.name}
                   </strong>
                   <small className="mt-1 block truncate text-[11px] text-muted">
                     {formatRelativeTime(project.lastActivity)}
                   </small>
                 </span>
-                <Chip size="sm" variant="soft" color="default" className="min-w-6 justify-center">
+                <Chip
+                  size="sm"
+                  variant="soft"
+                  color="default"
+                  className="min-w-6 justify-center border border-border bg-surface"
+                >
                   <Chip.Label>{providerSessionCount}</Chip.Label>
                 </Chip>
               </ListBox.Item>

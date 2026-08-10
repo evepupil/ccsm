@@ -63,7 +63,10 @@ export function SessionWorkspace({
       />
 
       {permissionWarning && (
-        <Alert status="danger" className="rounded-none border-x-0 border-t-0 py-2">
+        <Alert
+          status="danger"
+          className="rounded-none border-x-0 border-t-0 border-l-[3px] border-l-danger py-2"
+        >
           <Alert.Indicator>
             <ShieldAlert size={15} />
           </Alert.Indicator>

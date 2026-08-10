@@ -34,16 +34,16 @@ export function SessionTable({
   return (
     <div className="h-full min-h-0 min-w-0">
       <Table variant="secondary" className="h-full min-h-0 rounded-none border-0 text-[12px]">
-        <Table.ScrollContainer className="h-full min-h-0 overflow-auto rounded-none border-0">
+        <Table.ScrollContainer className="h-full min-h-0 overflow-auto rounded-none border-0 [scrollbar-gutter:stable]">
           <Table.Content className="min-w-[520px] table-fixed max-[1000px]:min-w-[480px]">
             <Table.Header>
-              <Table.Column className="sticky top-0 z-[2] h-9 bg-surface-secondary px-4 text-[11px] font-bold text-muted">
+              <Table.Column className="sticky top-0 z-[2] h-[38px] !rounded-none bg-surface-secondary px-4 text-[12px] font-bold text-muted">
                 会话
               </Table.Column>
-              <Table.Column className="sticky top-0 z-[2] h-9 w-[132px] bg-surface-secondary px-3 text-[11px] font-bold text-muted max-[1000px]:hidden">
+              <Table.Column className="sticky top-0 z-[2] h-[38px] w-[132px] !rounded-none bg-surface-secondary px-3 text-[12px] font-bold text-muted max-[1000px]:hidden">
                 最近活动
               </Table.Column>
-              <Table.Column className="sticky top-0 z-[2] h-9 w-[126px] bg-surface-secondary px-3 text-right text-[11px] font-bold text-muted">
+              <Table.Column className="sticky top-0 z-[2] h-[38px] w-[126px] !rounded-none bg-surface-secondary px-3 text-right text-[12px] font-bold text-muted">
                 <span className="block text-right">操作</span>
               </Table.Column>
             </Table.Header>

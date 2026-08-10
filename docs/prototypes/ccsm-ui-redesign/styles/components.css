@@ -11,14 +11,15 @@ svg {
   flex: 0 0 34px;
   place-items: center;
   border-radius: var(--radius-md);
-  color: #ffffff;
-  background: var(--text-primary);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  color: var(--accent);
+  background: var(--accent-soft);
 }
 
 @media (prefers-color-scheme: dark) {
   .brand-mark {
-    color: #172026;
-    background: #edf1f2;
+    color: var(--accent);
+    background: var(--accent-soft);
   }
 }
 
@@ -98,6 +99,7 @@ svg {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--bg-subtle);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--border) 35%, transparent);
 }
 
 .provider-tab {
@@ -124,7 +126,9 @@ svg {
 .provider-tab[aria-selected="true"] {
   color: var(--text-primary);
   background: var(--bg-surface);
-  box-shadow: 0 1px 3px rgb(18 29 34 / 12%);
+  box-shadow:
+    0 1px 3px rgb(18 29 34 / 12%),
+    inset 0 0 0 1px color-mix(in srgb, var(--border) 65%, transparent);
 }
 
 .provider-dot {
@@ -152,6 +156,16 @@ svg {
   font-variant-numeric: tabular-nums;
 }
 
+.count-label {
+  min-width: 24px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-surface);
+  font-size: 10px;
+  text-align: center;
+}
+
 .session-count-badge {
   flex: 0 0 auto;
   padding: 2px 7px;
@@ -164,8 +178,8 @@ svg {
 .project-item {
   display: grid;
   width: 100%;
-  min-height: 52px;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
+  min-height: 56px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
   padding: 7px 9px;
@@ -187,14 +201,29 @@ svg {
 .project-item[aria-current="page"] {
   border-color: color-mix(in srgb, var(--accent) 26%, var(--border));
   background: var(--bg-selected);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
-.project-item[aria-current="page"] > svg {
+.project-item[aria-current="page"] .project-icon {
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
   color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 72%, var(--bg-surface));
 }
 
-.project-item > svg {
+.project-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   color: var(--text-tertiary);
+  background: var(--bg-surface);
+}
+
+.project-icon svg {
+  width: 15px;
+  height: 15px;
 }
 
 .project-item-copy {
@@ -211,7 +240,7 @@ svg {
 }
 
 .project-item-copy strong {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 650;
 }
 
@@ -226,6 +255,7 @@ svg {
   padding: 2px 5px;
   border-radius: 999px;
   color: var(--text-secondary);
+  border: 1px solid var(--border);
   background: var(--bg-surface);
   font-size: 10px;
   font-weight: 700;
@@ -238,10 +268,10 @@ svg {
   align-items: center;
   gap: 6px;
   padding: 0 8px;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
-  background: var(--bg-subtle);
+  background: var(--bg-surface);
 }
 
 .sort-control select {
@@ -262,6 +292,7 @@ svg {
   height: 32px;
   align-items: center;
   gap: 7px;
+  padding: 0 7px;
   color: var(--text-secondary);
   font-size: 12px;
   user-select: none;
@@ -327,14 +358,15 @@ svg {
   align-items: center;
   gap: 8px;
   padding: 7px 16px;
-  border-bottom: 1px solid color-mix(in srgb, var(--danger) 26%, var(--border));
+  border-bottom: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
+  border-left: 3px solid var(--danger);
   color: var(--danger);
   background: var(--danger-soft);
   font-size: 12px;
 }
 
 .session-row {
-  min-height: 84px;
+  min-height: 88px;
   align-items: center;
   padding: 11px 16px;
   border-bottom: 1px solid var(--border);
@@ -366,7 +398,7 @@ svg {
 .session-title {
   min-width: 0;
   overflow: hidden;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -410,7 +442,7 @@ svg {
   margin-top: 6px;
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .session-meta span {
@@ -435,7 +467,7 @@ svg {
   overflow: hidden;
   color: var(--text-tertiary);
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -461,7 +493,7 @@ svg {
   display: block;
   margin-top: 5px;
   color: var(--text-tertiary);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 400;
 }
 

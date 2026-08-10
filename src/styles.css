@@ -56,6 +56,18 @@ select {
 }
 
 * {
-  scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, var(--muted) 38%, transparent) transparent;
   scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 48%, transparent);
+  background-clip: padding-box;
 }

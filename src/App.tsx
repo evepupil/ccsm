@@ -23,7 +23,7 @@ export default function App() {
   }
 
   return (
-    <div className="grid h-full min-w-[760px] grid-rows-[58px_minmax(0,1fr)_28px] bg-background text-foreground">
+    <div className="grid h-full min-w-[760px] grid-rows-[60px_minmax(0,1fr)_28px] bg-background text-foreground">
       <AppHeader
         loading={sessionCatalog.loading}
         provider={sessionCatalog.provider}
@@ -34,7 +34,7 @@ export default function App() {
         onSearchChange={filters.setSearchQuery}
       />
 
-      <div className="grid min-h-0 grid-cols-[252px_minmax(0,1fr)] max-[1000px]:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="grid min-h-0 grid-cols-[260px_minmax(0,1fr)] max-[1000px]:grid-cols-[224px_minmax(0,1fr)]">
         <ProjectSidebar
           projects={projects}
           selectedProjectId={sessionCatalog.selectedProjectId}
