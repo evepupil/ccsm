@@ -1,7 +1,6 @@
-import { AppHeader } from "./components/AppHeader";
 import { ProjectSidebar } from "./components/ProjectSidebar";
 import { SessionWorkspace } from "./components/SessionWorkspace";
-import { StatusBar } from "./components/StatusBar";
+import { WindowTitlebar } from "./components/WindowTitlebar";
 import { useSessionCatalog } from "./hooks/useSessionCatalog";
 import { useSessionFilters } from "./hooks/useSessionFilters";
 import { useSessionLauncher } from "./hooks/useSessionLauncher";
@@ -23,23 +22,23 @@ export default function App() {
   }
 
   return (
-    <div className="grid h-full min-w-[760px] grid-rows-[60px_minmax(0,1fr)_28px] bg-background text-foreground">
-      <AppHeader
-        loading={sessionCatalog.loading}
-        provider={sessionCatalog.provider}
-        searchQuery={filters.searchQuery}
-        sessionCount={sessionCount}
-        onProviderChange={sessionCatalog.switchProvider}
-        onRefresh={() => void sessionCatalog.refresh()}
-        onSearchChange={filters.setSearchQuery}
-      />
+    <div className="window-shell">
+      <WindowTitlebar provider={sessionCatalog.provider} />
 
-      <div className="grid min-h-0 grid-cols-[260px_minmax(0,1fr)] max-[1000px]:grid-cols-[224px_minmax(0,1fr)]">
+      <div className="app-body">
         <ProjectSidebar
           projects={projects}
           selectedProjectId={sessionCatalog.selectedProjectId}
           searchQuery={filters.searchQuery}
           provider={sessionCatalog.provider}
+          loading={sessionCatalog.loading}
+          scannedAt={sessionCatalog.catalog?.scannedAt ?? null}
+          sessionCount={sessionCount}
+          showArchived={filters.showArchived}
+          warning={sessionCatalog.catalog?.warnings[0] ?? null}
+          onProviderChange={sessionCatalog.switchProvider}
+          onRefresh={() => void sessionCatalog.refresh()}
+          onSearchChange={filters.setSearchQuery}
           onSelectProject={selectProject}
         />
 
@@ -64,8 +63,6 @@ export default function App() {
           onCopyId={(sessionId) => void launcher.copySessionId(sessionId)}
         />
       </div>
-
-      <StatusBar catalog={sessionCatalog.catalog} />
     </div>
   );
 }

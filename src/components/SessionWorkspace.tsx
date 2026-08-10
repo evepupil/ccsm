@@ -1,8 +1,8 @@
-import { AlertCircle, RefreshCw, ShieldAlert } from "lucide-react";
-import { Alert, Button, EmptyState, Spinner } from "@heroui/react";
+import { AlertCircle, MessageSquareOff, RefreshCw, ShieldAlert } from "lucide-react";
+import { Button, Spinner } from "@heroui/react";
 
 import type { ProjectSummary, SessionProvider, SessionSort, SessionSummary } from "../types";
-import { SessionTable } from "./SessionTable";
+import { SessionList } from "./SessionList";
 import { SessionToolbar } from "./SessionToolbar";
 
 interface SessionWorkspaceProps {
@@ -47,11 +47,10 @@ export function SessionWorkspace({
   onSortChange,
 }: SessionWorkspaceProps) {
   return (
-    <main className="flex min-h-0 min-w-0 flex-col bg-surface">
+    <main className="main-workspace">
       <SessionToolbar
         selectedProject={selectedProject}
         provider={provider}
-        searchQuery={searchQuery}
         searching={searching}
         resultCount={sessions.length}
         sort={sort}
@@ -63,43 +62,57 @@ export function SessionWorkspace({
       />
 
       {permissionWarning && (
-        <Alert
-          status="danger"
-          className="rounded-none border-x-0 border-t-0 border-l-[3px] border-l-danger py-2"
-        >
-          <Alert.Indicator>
-            <ShieldAlert size={15} />
-          </Alert.Indicator>
-          <Alert.Content>
-            <Alert.Description>{permissionWarning}</Alert.Description>
-          </Alert.Content>
-        </Alert>
+        <div className="permission-warning" role="status">
+          <ShieldAlert aria-hidden="true" />
+          <span>{permissionWarning}</span>
+        </div>
       )}
 
-      <div className="min-h-0 flex-1">
+      <section className="session-content" aria-label="会话列表">
+        <div className="content-heading">
+          <div>
+            <h2>{searching ? "搜索结果" : "会话"}</h2>
+            <p>{`${sessions.length} 个${showArchived ? "匹配" : "可续接"}会话`}</p>
+          </div>
+          {searching && <span className="active-filter">“{searchQuery}”</span>}
+        </div>
+
         {error ? (
-          <EmptyState className="flex min-h-[240px] flex-col items-center justify-center p-8 text-center text-muted">
-            <AlertCircle size={28} className="text-danger" />
-            <h2 className="m-0 mt-3 text-[15px] font-bold text-foreground">无法读取本机会话</h2>
-            <p className="mt-1.5 max-w-[520px] text-[12px] text-muted">{error}</p>
-            <Button variant="outline" size="sm" className="mt-3.5" onPress={onRefresh}>
-              <RefreshCw size={15} /> 重试
+          <div className="empty-state">
+            <span className="empty-state-icon error" aria-hidden="true">
+              <AlertCircle />
+            </span>
+            <h3>无法读取本机会话</h3>
+            <p>{error}</p>
+            <Button variant="outline" size="sm" className="retry-button" onPress={onRefresh}>
+              <RefreshCw aria-hidden="true" />
+              重试
             </Button>
-          </EmptyState>
+          </div>
         ) : initialLoading ? (
-          <div className="flex min-h-[240px] items-center justify-center gap-2 text-[12px] text-muted">
-            <Spinner size="sm" /> 正在扫描本机会话...
+          <div className="loading-state" role="status">
+            <Spinner size="sm" />
+            <span>正在扫描本机会话...</span>
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="empty-state">
+            <span className="empty-state-icon" aria-hidden="true">
+              <MessageSquareOff />
+            </span>
+            <h3>没有可显示的会话</h3>
+            <p>{searching ? "换个关键词再试一次。" : "当前筛选条件下没有会话。"}</p>
           </div>
         ) : (
-          <SessionTable
+          <SessionList
             sessions={sessions}
-            searching={searching}
+            sort={sort}
+            showProject={searching}
             launchingSessionKey={launchingSessionKey}
             onResume={onResume}
             onCopyId={onCopyId}
           />
         )}
-      </div>
+      </section>
     </main>
   );
 }

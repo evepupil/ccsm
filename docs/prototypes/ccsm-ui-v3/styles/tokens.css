@@ -1,0 +1,77 @@
+:root {
+  color-scheme: light;
+  --chrome: #151719;
+  --chrome-border: #2b2e31;
+  --sidebar: #1c1f22;
+  --sidebar-raised: #24282b;
+  --sidebar-hover: #292e31;
+  --sidebar-selected: #303735;
+  --sidebar-border: #303438;
+  --sidebar-text: #f1f3f2;
+  --sidebar-muted: #9aa3a1;
+  --canvas: #f3f5f6;
+  --surface: #ffffff;
+  --surface-muted: #f8f9fa;
+  --surface-hover: #f4f8f6;
+  --border: #dce2e4;
+  --border-strong: #cbd3d6;
+  --text: #181c1f;
+  --text-secondary: #4f5a60;
+  --text-muted: #778289;
+  --accent: #168267;
+  --accent-hover: #106e56;
+  --accent-soft: #dff1eb;
+  --danger: #c43e43;
+  --danger-soft: #fcebec;
+  --warning: #9a671f;
+  --warning-soft: #fff2d8;
+  --claude: #c56b42;
+  --claude-soft: #f7e8df;
+  --codex: #3d82bd;
+  --codex-soft: #e3eef8;
+  --shadow-window: 0 24px 72px rgb(9 13 15 / 22%);
+  --shadow-control: 0 1px 2px rgb(18 26 29 / 8%);
+  --shadow-row: 0 1px 2px rgb(18 26 29 / 5%);
+  --radius-sm: 4px;
+  --radius-md: 7px;
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif;
+  --font-mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --chrome: #101214;
+    --chrome-border: #25292c;
+    --sidebar: #151719;
+    --sidebar-raised: #202427;
+    --sidebar-hover: #272c2f;
+    --sidebar-selected: #2b3431;
+    --sidebar-border: #2c3134;
+    --sidebar-text: #f0f2f1;
+    --sidebar-muted: #939c9a;
+    --canvas: #171a1c;
+    --surface: #202427;
+    --surface-muted: #252a2d;
+    --surface-hover: #27302d;
+    --border: #343a3e;
+    --border-strong: #454d52;
+    --text: #f0f2f2;
+    --text-secondary: #bdc5c8;
+    --text-muted: #8e999f;
+    --accent: #48b796;
+    --accent-hover: #5cc3a3;
+    --accent-soft: #23483d;
+    --danger: #ef7c80;
+    --danger-soft: #4a292c;
+    --warning: #e1b55f;
+    --warning-soft: #453a23;
+    --claude: #eca27e;
+    --claude-soft: #4a3026;
+    --codex: #91c5ef;
+    --codex-soft: #243b50;
+    --shadow-window: 0 24px 72px rgb(0 0 0 / 45%);
+    --shadow-control: 0 1px 2px rgb(0 0 0 / 24%);
+    --shadow-row: 0 1px 2px rgb(0 0 0 / 20%);
+  }
+}

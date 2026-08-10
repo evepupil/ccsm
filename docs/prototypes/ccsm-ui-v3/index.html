@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CCSM Desktop UI v3</title>
+    <link rel="stylesheet" href="styles/tokens.css" />
+    <link rel="stylesheet" href="styles/layout.css" />
+    <link rel="stylesheet" href="styles/components.css" />
+  </head>
+  <body>
+    <div class="window-shell">
+      <header class="window-titlebar">
+        <div class="window-identity" data-tauri-drag-region>
+          <span class="window-logo" aria-hidden="true">
+            <i data-lucide="square-terminal"></i>
+          </span>
+          <strong>CCSM</strong>
+          <span class="title-divider" aria-hidden="true"></span>
+          <span id="window-provider">Claude Code</span>
+        </div>
+
+        <div class="window-actions" aria-label="窗口控制">
+          <button class="window-button" type="button" data-window-action="minimize" title="最小化">
+            <i data-lucide="minus" aria-hidden="true"></i>
+          </button>
+          <button class="window-button" type="button" data-window-action="maximize" title="最大化">
+            <i data-lucide="square" aria-hidden="true"></i>
+          </button>
+          <button
+            class="window-button window-close"
+            type="button"
+            data-window-action="close"
+            title="关闭"
+          >
+            <i data-lucide="x" aria-hidden="true"></i>
+          </button>
+        </div>
+      </header>
+
+      <div class="app-body">
+        <aside class="sidebar" aria-label="会话导航">
+          <div class="sidebar-tools">
+            <div class="provider-switch" role="tablist" aria-label="会话来源">
+              <button class="provider-option" type="button" role="tab" data-provider="claude">
+                <span class="provider-mark claude" aria-hidden="true">C</span>
+                <span>Claude</span>
+              </button>
+              <button class="provider-option" type="button" role="tab" data-provider="codex">
+                <span class="provider-mark codex" aria-hidden="true">X</span>
+                <span>Codex</span>
+              </button>
+            </div>
+
+            <label class="sidebar-search">
+              <i data-lucide="search" aria-hidden="true"></i>
+              <input
+                id="session-search"
+                type="search"
+                placeholder="搜索项目或会话"
+                autocomplete="off"
+              />
+              <button id="clear-search" class="search-clear" type="button" title="清空搜索">
+                <i data-lucide="x" aria-hidden="true"></i>
+              </button>
+            </label>
+          </div>
+
+          <div class="sidebar-heading">
+            <span>项目</span>
+            <span id="project-count" class="sidebar-count">0</span>
+          </div>
+
+          <nav id="project-list" class="project-list" aria-label="项目列表"></nav>
+
+          <footer class="sidebar-footer">
+            <div class="source-summary">
+              <i data-lucide="database" aria-hidden="true"></i>
+              <span>
+                <strong id="total-session-count">0 个会话</strong>
+                <small id="scan-status">刚刚更新</small>
+              </span>
+            </div>
+            <button
+              id="refresh-button"
+              class="icon-button sidebar-refresh"
+              type="button"
+              title="重新扫描"
+            >
+              <i data-lucide="refresh-cw" aria-hidden="true"></i>
+            </button>
+          </footer>
+        </aside>
+
+        <main class="main-workspace">
+          <header class="workspace-header">
+            <div class="workspace-title">
+              <div class="workspace-title-line">
+                <h1 id="workspace-name">选择一个项目</h1>
+                <span id="workspace-count" class="workspace-count">0</span>
+              </div>
+              <p id="workspace-path"></p>
+            </div>
+
+            <div class="workspace-actions">
+              <label class="sort-picker">
+                <i data-lucide="arrow-up-down" aria-hidden="true"></i>
+                <select id="sort-select" aria-label="排序方式">
+                  <option value="recent">最近活动</option>
+                  <option value="title">标题</option>
+                </select>
+                <i data-lucide="chevron-down" aria-hidden="true"></i>
+              </label>
+
+              <label class="compact-switch">
+                <input id="archived-toggle" type="checkbox" role="switch" />
+                <span class="switch-track" aria-hidden="true"><span></span></span>
+                <span>归档</span>
+              </label>
+
+              <label class="compact-switch permission-toggle">
+                <input id="permission-toggle" type="checkbox" role="switch" />
+                <span class="switch-track" aria-hidden="true"><span></span></span>
+                <i data-lucide="shield" aria-hidden="true"></i>
+                <span>最高权限</span>
+              </label>
+            </div>
+          </header>
+
+          <div id="permission-warning" class="permission-warning" role="status" hidden>
+            <i data-lucide="shield-alert" aria-hidden="true"></i>
+            <span>续接时将跳过 CLI 权限确认，请仅用于可信项目。</span>
+          </div>
+
+          <section class="session-content" aria-label="会话列表">
+            <div class="content-heading">
+              <div>
+                <h2 id="content-title">最近会话</h2>
+                <p id="content-summary">0 个可续接会话</p>
+              </div>
+              <span id="active-filter" class="active-filter" hidden></span>
+            </div>
+            <div id="session-groups" class="session-groups"></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="scripts/mock-data.js"></script>
+    <script src="scripts/prototype.js"></script>
+  </body>
+</html>

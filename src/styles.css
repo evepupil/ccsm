@@ -1,73 +1,8 @@
 @import "@heroui/styles";
+@import "./styles/tokens.css";
+@import "./styles/base.css";
+@import "./styles/window.css";
+@import "./styles/sidebar.css";
+@import "./styles/sessions.css";
 
-/* 让 dark: 工具类跟随 <html> 上的 dark class，与 HeroUI 暗色触发方式一致。 */
 @custom-variant dark (&:where(.dark, .dark *));
-
-/*
- * 品牌色：把 HeroUI 的 accent 令牌覆盖为 CCSM 青绿。
- * Button variant="primary" 等强调控件会跟随；hover / soft 等派生色由 HeroUI 基于 --accent 自动 color-mix。
- */
-:root {
-  --accent: #14745c;
-  --accent-foreground: #ffffff;
-}
-
-.dark {
-  --accent: #42ad8b;
-  --accent-foreground: #10251f;
-}
-
-:root {
-  font-family:
-    Inter,
-    "Segoe UI",
-    "Microsoft YaHei UI",
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
-  color: var(--foreground);
-  background: var(--background);
-  text-rendering: optimizeLegibility;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-}
-
-body {
-  min-width: 760px;
-  overflow: hidden;
-  font-size: 13px;
-}
-
-button,
-input,
-select {
-  letter-spacing: 0;
-}
-
-* {
-  scrollbar-color: color-mix(in srgb, var(--muted) 38%, transparent) transparent;
-  scrollbar-width: thin;
-}
-
-*::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-*::-webkit-scrollbar-thumb {
-  border: 3px solid transparent;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--muted) 48%, transparent);
-  background-clip: padding-box;
-}
