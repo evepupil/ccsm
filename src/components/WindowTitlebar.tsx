@@ -1,6 +1,7 @@
-import { Minus, Square, SquareTerminal, X } from "lucide-react";
+import { Minus, Square, X } from "lucide-react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 
+import appIcon from "../assets/brand/ccsm-app-icon-ui.png";
 import { providerLabel } from "../lib/presentation";
 import type { SessionProvider } from "../types";
 
@@ -32,7 +33,7 @@ export function WindowTitlebar({ provider }: WindowTitlebarProps) {
     >
       <div className="window-identity" data-tauri-drag-region>
         <span className="window-logo" aria-hidden="true">
-          <SquareTerminal />
+          <img src={appIcon} alt="" draggable={false} />
         </span>
         <strong>CCSM</strong>
         <span className="title-divider" aria-hidden="true" />

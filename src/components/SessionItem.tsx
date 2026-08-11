@@ -1,6 +1,5 @@
 import {
   Archive,
-  Braces,
   Copy,
   Cpu,
   Folder,
@@ -9,11 +8,11 @@ import {
   LoaderCircle,
   MessagesSquare,
   Play,
-  Sparkles,
 } from "lucide-react";
 
 import { formatAbsoluteTime, formatCount, formatRelativeTime } from "../lib/format";
 import type { SessionSummary } from "../types";
+import { ProviderLogo } from "./ProviderLogo";
 
 interface SessionItemProps {
   launchBlocked: boolean;
@@ -45,7 +44,7 @@ export function SessionItem({
   return (
     <article className="session-card" data-session-id={session.id}>
       <span className={`session-provider-icon ${session.provider}`} aria-hidden="true">
-        {session.provider === "claude" ? <Sparkles /> : <Braces />}
+        <ProviderLogo provider={session.provider} />
       </span>
 
       <div className="session-copy">

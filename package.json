@@ -11,6 +11,7 @@
     "test": "vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "icons:generate": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/generate-app-icon.ps1 && tauri icon src/assets/brand/ccsm-app-icon.png --output src-tauri/icons",
     "tauri": "tauri",
     "tauri:build": "tauri build"
   },

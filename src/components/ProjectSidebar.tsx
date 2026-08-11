@@ -4,6 +4,7 @@ import { Button, ListBox, SearchField, Tabs, Tooltip } from "@heroui/react";
 import { formatRelativeTime, normalizeSearch } from "../lib/format";
 import { selectVisibleProjects } from "../lib/sessions";
 import type { ProjectSummary, SessionProvider } from "../types";
+import { ProviderLogo } from "./ProviderLogo";
 
 interface ProjectSidebarProps {
   loading: boolean;
@@ -67,14 +68,14 @@ export function ProjectSidebar({
             <Tabs.Tab id="claude" className="provider-option">
               <Tabs.Indicator className="provider-indicator" />
               <span className="provider-mark claude" aria-hidden="true">
-                C
+                <ProviderLogo provider="claude" />
               </span>
               <span>Claude</span>
             </Tabs.Tab>
             <Tabs.Tab id="codex" className="provider-option">
               <Tabs.Indicator className="provider-indicator" />
               <span className="provider-mark codex" aria-hidden="true">
-                X
+                <ProviderLogo provider="codex" />
               </span>
               <span>Codex</span>
             </Tabs.Tab>

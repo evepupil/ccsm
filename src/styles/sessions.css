@@ -218,22 +218,32 @@
   width: 36px;
   height: 36px;
   place-items: center;
+  overflow: hidden;
   border-radius: var(--radius-md);
 }
 
 .session-provider-icon.claude {
-  color: var(--claude);
-  background: var(--claude-soft);
+  background: transparent;
 }
 
 .session-provider-icon.codex {
-  color: var(--codex);
-  background: var(--codex-soft);
+  border: 1px solid color-mix(in srgb, #ffffff 14%, transparent);
+  background: #101213;
 }
 
-.session-provider-icon svg {
-  width: 18px;
-  height: 18px;
+.session-provider-icon .provider-artwork {
+  display: block;
+  object-fit: contain;
+}
+
+.session-provider-icon.claude .provider-artwork {
+  width: 32px;
+  height: 32px;
+}
+
+.session-provider-icon.codex .provider-artwork {
+  width: 22px;
+  height: 22px;
 }
 
 .session-copy {

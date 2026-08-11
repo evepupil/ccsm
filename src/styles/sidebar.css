@@ -74,20 +74,27 @@
   display: grid;
   width: 17px;
   height: 17px;
+  flex: 0 0 17px;
   place-items: center;
+  overflow: hidden;
   border-radius: 5px;
-  font-size: 9px;
-  font-weight: 750;
 }
 
 .provider-mark.claude {
-  color: #f4b08e;
-  background: #4a2e22;
+  background: transparent;
 }
 
 .provider-mark.codex {
-  color: #9ecbf1;
-  background: #233d52;
+  padding: 2px;
+  background: #0d0f10;
+  box-shadow: inset 0 0 0 1px #343a3d;
+}
+
+.provider-mark .provider-artwork {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .sidebar-search,
