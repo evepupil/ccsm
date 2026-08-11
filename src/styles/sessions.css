@@ -237,8 +237,9 @@
 }
 
 .session-provider-icon.claude .provider-artwork {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
+  transform: scale(1.16);
 }
 
 .session-provider-icon.codex .provider-artwork {
