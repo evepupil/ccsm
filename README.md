@@ -23,6 +23,7 @@ CCSM 是一个面向 Windows 的本地桌面应用，用于统一浏览 Claude C
 
 - 续接时优先打开 Windows Terminal；未安装时回退到独立 PowerShell 窗口。
 - 可临时开启最高权限。Claude Code 使用 `--dangerously-skip-permissions`，Codex 使用 `--yolo`；该选项默认关闭并持续显示风险提示。
+<img width="1772" height="1141" alt="exp_0" src="https://github.com/user-attachments/assets/172e5838-93cd-4e26-977c-0c6329c64a38" />
 
 ## 数据来源
 
