@@ -4,7 +4,7 @@
 - **对应代码**：`src-tauri/src/providers/codex.rs`、`src-tauri/src/catalog.rs`、`src-tauri/src/models.rs`
 - **所属里程碑**：[M1](../roadmap.md#m1)
 - **当前状态**：进行中
-- **最近更新时间**：2026-07-27
+- **最近更新时间**：2026-08-17
 
 ## 职责与边界
 
@@ -31,7 +31,7 @@ Claude SessionSummary ────────┤
 
 1. 以 `threads` 表作为 Codex 会话清单，避免逐个扫描大体积 rollout JSONL。
 2. `has_user_event` 在当前 Codex 版本中不能作为可见性条件，因此保留有标题的全部 thread，并展示 `source`、`thread_source` 作为来源细节。
-3. 标题按 `name`、`title`、`preview`、`first_user_message` 的顺序回退，只把最终标题返回前端。
+3. 标题按用户可见的 `name`、自动标题 `title`、`preview`、`first_user_message` 的顺序回退，只把最终标题返回前端；空白值会继续回退。
 4. 可选列通过 `PRAGMA table_info` 检测，时间字段兼容 `*_at_ms` 与旧版秒时间戳。
 5. Claude 与 Codex 项目路径统一斜杠、大小写和末尾分隔符后再合并。
 
@@ -45,7 +45,7 @@ Claude SessionSummary ────────┤
 
 ## 验证方式
 
-Rust 单测使用临时 SQLite 数据库覆盖最高版本选择、动态字段查询、秒时间戳转换、Token 与分支读取，以及只读扫描结果。统一 catalog 单测覆盖大小写和斜杠不同的双来源项目合并。
+Rust 单测使用临时 SQLite 数据库覆盖最高版本选择、用户自定义 `name` 优先、动态字段查询、秒时间戳转换、Token 与分支读取，以及只读扫描结果。统一 catalog 单测覆盖大小写和斜杠不同的双来源项目合并。
 
 本机 `state_5.sqlite` 的 `threads` 表结构已核对，当前 58 条记录覆盖 47 个项目目录，并且都具备标题、项目目录、rollout 路径和预览字段。完整门禁与 Windows release 打包已通过。最终人工验收需要打开 release 客户端核对真实 Codex 标题和时间。
 
@@ -59,3 +59,4 @@ Rust 单测使用临时 SQLite 数据库覆盖最高版本选择、动态字段�
 ## 改动历史
 
 - 2026-07-27：建立 Codex SQLite 只读扫描、动态列兼容、来源详情和双来源项目合并。
+- 2026-08-17：补充用户自定义 `name` 优先的回归夹具，并忽略空白标题值。

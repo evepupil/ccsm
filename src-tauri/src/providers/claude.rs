@@ -39,6 +39,7 @@ struct ParsedSession {
     branch: Option<String>,
     model: Option<String>,
     claude_version: Option<String>,
+    custom_title: Option<String>,
     summary: Option<String>,
     first_user_message: Option<String>,
 }
@@ -204,6 +205,11 @@ fn absorb_record(parsed: &mut ParsedSession, value: &Value) {
     set_first_string(&mut parsed.claude_version, value.get("version"));
 
     match value.get("type").and_then(Value::as_str) {
+        Some("custom-title") => {
+            if let Some(custom_title) = value.get("customTitle").and_then(Value::as_str) {
+                parsed.custom_title = clean_title(custom_title);
+            }
+        }
         Some("summary") => {
             if let Some(summary) = value.get("summary").and_then(Value::as_str) {
                 parsed.summary = clean_title(summary);
@@ -237,6 +243,10 @@ fn absorb_record(parsed: &mut ParsedSession, value: &Value) {
 }
 
 fn choose_title(desktop: Option<&DesktopSession>, parsed: &ParsedSession) -> (String, String) {
+    if let Some(custom_title) = parsed.custom_title.clone() {
+        return (custom_title, "customTitle".to_owned());
+    }
+
     if let Some(record) = desktop
         && let Some(title) = record.title.as_deref().and_then(clean_title)
     {
@@ -422,6 +432,41 @@ mod tests {
         assert_eq!(
             choose_title(Some(&desktop), &parsed),
             ("桌面端标题".to_owned(), "user".to_owned())
+        );
+    }
+
+    #[test]
+    fn latest_custom_title_has_priority() {
+        let desktop = DesktopSession {
+            cli_session_id: Uuid::new_v4().to_string(),
+            title: Some("Desktop 标题".to_owned()),
+            title_source: Some("user".to_owned()),
+            ..DesktopSession::default()
+        };
+        let mut parsed = ParsedSession {
+            summary: Some("会话摘要".to_owned()),
+            first_user_message: Some("第一条消息".to_owned()),
+            ..ParsedSession::default()
+        };
+
+        absorb_record(
+            &mut parsed,
+            &serde_json::json!({
+                "type": "custom-title",
+                "customTitle": "旧的用户标题"
+            }),
+        );
+        absorb_record(
+            &mut parsed,
+            &serde_json::json!({
+                "type": "custom-title",
+                "customTitle": "新的用户标题"
+            }),
+        );
+
+        assert_eq!(
+            choose_title(Some(&desktop), &parsed),
+            ("新的用户标题".to_owned(), "customTitle".to_owned())
         );
     }
 

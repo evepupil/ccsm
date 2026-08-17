@@ -43,6 +43,7 @@ export function formatBytes(bytes: number): string {
 
 export function titleSourceLabel(source: string): string {
   if (source === "codexIndex") return "Codex 标题";
+  if (source === "customTitle") return "用户标题";
   if (source === "summary") return "会话摘要";
   if (source === "firstMessage") return "首条消息";
   if (source === "fallback") return "自动命名";

@@ -205,7 +205,7 @@ fn coalesce_text_expression(
     let mut expressions = candidates
         .iter()
         .filter(|candidate| columns.contains(**candidate))
-        .map(|candidate| format!("NULLIF({candidate}, '')"))
+        .map(|candidate| format!("NULLIF(TRIM({candidate}), '')"))
         .collect::<Vec<_>>();
     expressions.push(fallback.to_owned());
     format!("COALESCE({})", expressions.join(", "))
@@ -303,6 +303,7 @@ mod tests {
                     source TEXT NOT NULL,
                     cwd TEXT NOT NULL,
                     title TEXT NOT NULL,
+                    name TEXT,
                     tokens_used INTEGER NOT NULL,
                     archived INTEGER NOT NULL,
                     git_branch TEXT,
@@ -319,10 +320,10 @@ mod tests {
         connection
             .execute(
                 "INSERT INTO threads (
-                    id, rollout_path, created_at, updated_at, source, cwd, title,
+                    id, rollout_path, created_at, updated_at, source, cwd, title, name,
                     tokens_used, archived, git_branch, cli_version, model,
                     reasoning_effort, thread_source, preview, first_user_message
-                ) VALUES (?1, ?2, 1785128400, 1785132000, 'cli', ?3, 'Codex 会话',
+                ) VALUES (?1, ?2, 1785128400, 1785132000, 'cli', ?3, '自动生成标题', '用户自定义标题',
                     4096, 0, 'main', '0.144.6', 'gpt-5', 'high', 'user', '', '')",
                 (
                     &session_id,
@@ -338,7 +339,7 @@ mod tests {
         assert_eq!(skipped, 0);
         assert_eq!(sessions.len(), 1);
         assert_eq!(sessions[0].provider, SessionProvider::Codex);
-        assert_eq!(sessions[0].title, "Codex 会话");
+        assert_eq!(sessions[0].title, "用户自定义标题");
         assert_eq!(sessions[0].tokens_used, Some(4096));
         assert_eq!(sessions[0].branch.as_deref(), Some("main"));
         assert!(sessions[0].can_resume);
