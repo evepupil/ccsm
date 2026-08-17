@@ -1,6 +1,6 @@
 [package]
 name = "ccsm"
-version = "0.3.0"
+version = "0.3.1"
 description = "Claude Code Session Manager with Claude Code and Codex support"
 authors = ["zhoutao"]
 edition = "2024"
