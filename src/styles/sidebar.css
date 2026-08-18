@@ -2,7 +2,7 @@
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: auto 38px minmax(0, 1fr) 42px;
+  grid-template-rows: auto 78px 38px minmax(0, 1fr) 42px;
   border-right: 1px solid var(--sidebar-border);
   color: var(--sidebar-text);
   background: var(--sidebar);
@@ -181,6 +181,94 @@
   color: var(--sidebar-muted);
   font-size: 11px;
   font-weight: 650;
+}
+
+.sidebar-chat {
+  min-width: 0;
+  padding: 8px 8px 4px;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+
+.sidebar-chat-heading {
+  height: 22px;
+  padding: 0 6px;
+}
+
+.temporary-session-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 4px;
+}
+
+.temporary-session-item {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 7px;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--sidebar-text);
+  background: transparent;
+  text-align: left;
+}
+
+.temporary-session-item:hover,
+.temporary-session-item.is-selected {
+  background: var(--sidebar-selected);
+}
+
+.temporary-session-item.is-selected {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.temporary-session-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #3f6157;
+  border-radius: var(--radius-md);
+  color: #74d0b2;
+  background: #253a34;
+}
+
+.temporary-session-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.temporary-add-button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--radius-md);
+  color: #b9c5c1;
+  background: var(--sidebar-raised);
+}
+
+.temporary-add-button:hover:not(:disabled) {
+  border-color: #4c7569;
+  color: var(--sidebar-text);
+  background: var(--sidebar-hover);
+}
+
+.temporary-add-button:disabled {
+  cursor: wait;
+  opacity: 0.52;
+}
+
+.temporary-add-button svg {
+  width: 15px;
+  height: 15px;
 }
 
 .sidebar-count {

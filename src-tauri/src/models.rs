@@ -9,6 +9,9 @@ pub enum SessionProvider {
     Codex,
 }
 
+pub const TEMPORARY_PROJECT_ID: &str = "ccsm://temporary";
+pub const TEMPORARY_PROJECT_NAME: &str = "\u{4e34}\u{65f6}\u{4f1a}\u{8bdd}";
+
 impl SessionProvider {
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -49,6 +52,7 @@ pub struct ProjectSummary {
     pub id: String,
     pub name: String,
     pub path: String,
+    pub is_temporary: bool,
     pub last_activity: String,
     pub session_count: usize,
     pub total_size: u64,
@@ -104,5 +108,6 @@ pub struct LaunchResult {
 pub struct NewSessionResult {
     pub provider: SessionProvider,
     pub terminal: String,
+    pub working_directory: String,
     pub highest_permissions: bool,
 }

@@ -11,6 +11,7 @@ import { useSessionArchive } from "./hooks/useSessionArchive";
 import { useSessionFilters } from "./hooks/useSessionFilters";
 import { useSessionLauncher } from "./hooks/useSessionLauncher";
 import { useSessionSelection } from "./hooks/useSessionSelection";
+import { TEMPORARY_PROJECT_ID } from "./lib/temporary";
 import type { SessionSummary } from "./types";
 
 export default function App() {
@@ -41,6 +42,9 @@ export default function App() {
     launcher.launchingSessionKey ===
       newSessionLaunchKey(sessionCatalog.provider, sessionCatalog.selectedProject.id),
   );
+  const temporarySessionLaunching =
+    launcher.launchingSessionKey ===
+    newSessionLaunchKey(sessionCatalog.provider, TEMPORARY_PROJECT_ID);
   useEffect(() => {
     selection.clearSelection();
   }, [
@@ -101,7 +105,12 @@ export default function App() {
           searchQuery={filters.searchQuery}
           provider={sessionCatalog.provider}
           showArchived={filters.showArchived}
+          temporarySessionLaunching={temporarySessionLaunching}
           onProviderChange={sessionCatalog.switchProvider}
+          onCreateTemporarySession={() => {
+            filters.setSearchQuery("");
+            void launcher.launchNew(sessionCatalog.provider, TEMPORARY_PROJECT_ID);
+          }}
           onSearchChange={filters.setSearchQuery}
           onSelectProject={selectProject}
         />
@@ -121,6 +130,7 @@ export default function App() {
           selectedSessionKeys={selection.selectedSessionKeys}
           sessions={filters.sessions}
           selectionMode={selection.selectionMode}
+          showProjectPath={sessionCatalog.selectedProject?.isTemporary ?? false}
           sort={filters.sort}
           showArchived={filters.showArchived}
           highestPermissions={filters.highestPermissions}

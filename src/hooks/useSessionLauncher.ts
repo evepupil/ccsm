@@ -4,6 +4,7 @@ import { toast } from "@heroui/react";
 import { resumeSession, startNewSession } from "../api";
 import { launchSessionKey, newSessionLaunchKey } from "../lib/launch";
 import { providerLabel, toErrorMessage } from "../lib/presentation";
+import { TEMPORARY_PROJECT_ID } from "../lib/temporary";
 import type { SessionProvider, SessionSummary } from "../types";
 
 export function useSessionLauncher(highestPermissions: boolean) {
@@ -34,10 +35,13 @@ export function useSessionLauncher(highestPermissions: boolean) {
       try {
         const result = await startNewSession(provider, projectId, highestPermissions);
         toast.success(
-          `${result.terminal} 已启动 ${providerLabel(result.provider)} 新会话${
-            result.highestPermissions ? "（最高权限）" : ""
-          }`,
+          `${result.terminal} 已启动 ${providerLabel(result.provider)} ${
+            projectId === TEMPORARY_PROJECT_ID ? "临时会话" : "新会话"
+          }${result.highestPermissions ? "（最高权限）" : ""}`,
         );
+        if (projectId === TEMPORARY_PROJECT_ID) {
+          toast.success(`工作目录：${result.workingDirectory}`);
+        }
       } catch (cause) {
         toast.danger(toErrorMessage(cause));
       } finally {

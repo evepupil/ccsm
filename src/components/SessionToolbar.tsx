@@ -57,7 +57,9 @@ export function SessionToolbar({
   const title = searching ? "全局搜索" : (selectedProject?.name ?? "选择一个项目");
   const path = searching
     ? `正在 ${providerLabel(provider)} 的全部项目中搜索`
-    : (selectedProject?.path ?? "");
+    : selectedProject?.isTemporary
+      ? `独立目录：${selectedProject.path}`
+      : (selectedProject?.path ?? "");
 
   return (
     <header className="workspace-header">

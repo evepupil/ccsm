@@ -1,6 +1,7 @@
 import type { ProjectSummary, SessionProvider, SessionSort, SessionSummary } from "../types";
 import { isSessionArchived, type SessionKey } from "./archive";
 import { normalizeSearch } from "./format";
+import { TEMPORARY_PROJECT_ID } from "./temporary";
 
 const EMPTY_ARCHIVED_SESSION_KEYS: ReadonlySet<SessionKey> = new Set();
 
@@ -48,6 +49,10 @@ export function selectVisibleProjects({
       return sessionText.includes(normalizedQuery);
     });
   });
+}
+
+export function isTemporaryProject(project: Pick<ProjectSummary, "id" | "isTemporary">): boolean {
+  return project.isTemporary || project.id === TEMPORARY_PROJECT_ID;
 }
 
 export function selectVisibleSessions({

@@ -24,6 +24,7 @@ interface SessionWorkspaceProps {
   selectedProject: ProjectSummary | null;
   sessions: SessionSummary[];
   selectionMode: boolean;
+  showProjectPath: boolean;
   showArchived: boolean;
   sort: SessionSort;
   onArchive: (session: SessionSummary, archived: boolean) => void;
@@ -59,6 +60,7 @@ export function SessionWorkspace({
   selectedProject,
   sessions,
   selectionMode,
+  showProjectPath,
   showArchived,
   sort,
   onArchive,
@@ -75,6 +77,9 @@ export function SessionWorkspace({
   onToggleSelectionMode,
   onUnarchiveSelected,
 }: SessionWorkspaceProps) {
+  const isTemporaryProject = selectedProject?.isTemporary ?? false;
+  const showTemporaryEmptyState = isTemporaryProject && !searching;
+
   return (
     <main className="main-workspace">
       <SessionToolbar
@@ -122,7 +127,9 @@ export function SessionWorkspace({
                 searching
                   ? "请先退出搜索，再创建新会话"
                   : selectedProject
-                    ? `在 ${selectedProject.name} 中创建新会话`
+                    ? isTemporaryProject
+                      ? "创建新的临时会话"
+                      : `在 ${selectedProject.name} 中创建新会话`
                     : "请选择一个项目"
               }
               aria-label="新会话"
@@ -133,7 +140,9 @@ export function SessionWorkspace({
               ) : (
                 <Plus aria-hidden="true" />
               )}
-              <span>{newSessionLaunching ? "启动中" : "新会话"}</span>
+              <span>
+                {newSessionLaunching ? "启动中" : isTemporaryProject ? "新建临时会话" : "新会话"}
+              </span>
             </button>
           </div>
         </div>
@@ -156,8 +165,25 @@ export function SessionWorkspace({
             <span className="empty-state-icon" aria-hidden="true">
               <MessageSquareOff />
             </span>
-            <h3>没有可显示的会话</h3>
-            <p>{searching ? "换个关键词再试一次。" : "当前筛选条件下没有会话。"}</p>
+            <h3>{showTemporaryEmptyState ? "还没有临时会话" : "没有可显示的会话"}</h3>
+            <p>
+              {searching
+                ? "换个关键词再试一次。"
+                : showTemporaryEmptyState
+                  ? "新会话会在独立目录中启动，方便随手试用。"
+                  : "当前筛选条件下没有会话。"}
+            </p>
+            {showTemporaryEmptyState && (
+              <button
+                className="empty-state-action"
+                type="button"
+                disabled={newSessionLaunching}
+                onClick={onNewSession}
+              >
+                <Plus aria-hidden="true" />
+                <span>新建临时会话</span>
+              </button>
+            )}
           </div>
         ) : (
           <SessionList
@@ -166,7 +192,8 @@ export function SessionWorkspace({
             sort={sort}
             selectedSessionKeys={selectedSessionKeys}
             selectionMode={selectionMode}
-            showProject={searching}
+            showProject={searching || showProjectPath}
+            showProjectPath={showProjectPath}
             launchingSessionKey={launchingSessionKey}
             onArchive={onArchive}
             onResume={onResume}

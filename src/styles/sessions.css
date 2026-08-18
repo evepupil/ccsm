@@ -429,6 +429,13 @@
   content: "·";
 }
 
+.session-meta .session-project-path {
+  max-width: min(100%, 520px);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
 .session-meta svg {
   width: 11px;
   height: 11px;
@@ -577,6 +584,38 @@
   max-width: 520px;
   margin: 6px 0 0;
   font-size: 12px;
+}
+
+.empty-state-action {
+  display: inline-flex;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 16px auto 0;
+  padding: 0 11px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  box-shadow: var(--shadow-control);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.empty-state-action:hover {
+  border-color: var(--accent-hover);
+  background: var(--accent-hover);
+}
+
+.empty-state-action:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.empty-state-action svg {
+  width: 14px;
+  height: 14px;
 }
 
 @media (max-width: 1000px) {

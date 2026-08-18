@@ -24,6 +24,7 @@ interface SessionItemProps {
   selectable: boolean;
   selected: boolean;
   showProject: boolean;
+  showProjectPath: boolean;
   onArchive: (session: SessionSummary, archived: boolean) => void;
   onCopyId: (sessionId: string) => void;
   onResume: (session: SessionSummary, fork: boolean) => void;
@@ -39,6 +40,7 @@ export function SessionItem({
   selectable,
   selected,
   showProject,
+  showProjectPath,
   onArchive,
   onCopyId,
   onResume,
@@ -52,6 +54,7 @@ export function SessionItem({
         : null;
   const model = session.model ?? session.cliVersion;
   const projectName = session.projectPath.split(/[\\/]/).filter(Boolean).at(-1);
+  const projectLabel = showProjectPath ? session.projectPath : projectName;
   const actionsDisabled = !session.canResume || launchBlocked;
   const archiveDisabled = launchBlocked || (session.isArchived && !ccsmArchived);
   const archiveLabel = ccsmArchived ? "取消归档" : session.isArchived ? "已归档" : "归档";
@@ -91,10 +94,13 @@ export function SessionItem({
         </div>
 
         <div className="session-meta">
-          {showProject && projectName && (
-            <span>
+          {showProject && projectLabel && (
+            <span
+              className={showProjectPath ? "session-project-path" : undefined}
+              title={session.projectPath}
+            >
               <Folder aria-hidden="true" />
-              {projectName}
+              {projectLabel}
             </span>
           )}
           {session.branch && (

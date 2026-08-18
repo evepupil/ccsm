@@ -4,6 +4,7 @@ use std::{
     process::{Command, Output},
 };
 
+use chrono::Local;
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
 
@@ -12,7 +13,7 @@ use uuid::Uuid;
 
 use crate::{
     catalog,
-    models::{CliStatus, LaunchResult, NewSessionResult, SessionProvider},
+    models::{CliStatus, LaunchResult, NewSessionResult, SessionProvider, TEMPORARY_PROJECT_ID},
 };
 
 #[cfg(target_os = "windows")]
@@ -102,6 +103,22 @@ pub fn start_new_session(
     highest_permissions: bool,
 ) -> Result<NewSessionResult, String> {
     let project_id = project_id.trim();
+    if project_id == TEMPORARY_PROJECT_ID {
+        let executable = find_cli(provider).ok_or_else(|| match provider {
+            SessionProvider::Claude => "未找到可用的 Claude Code CLI".to_owned(),
+            SessionProvider::Codex => "未找到可用的 Codex CLI".to_owned(),
+        })?;
+        let working_directory = create_temporary_session_directory()?;
+        let command = build_new_session_command(provider, &executable, highest_permissions);
+        let terminal = launch_terminal(&working_directory.display().to_string(), &command)?;
+        return Ok(NewSessionResult {
+            provider,
+            terminal,
+            working_directory: working_directory.display().to_string(),
+            highest_permissions,
+        });
+    }
+
     if project_id.is_empty() {
         return Err("未选择项目".to_owned());
     }
@@ -126,8 +143,45 @@ pub fn start_new_session(
     launch_terminal(&project.path, &command).map(|terminal| NewSessionResult {
         provider,
         terminal,
+        working_directory: project.path.clone(),
         highest_permissions,
     })
+}
+
+fn create_temporary_session_directory() -> Result<PathBuf, String> {
+    let home_dir = dirs::home_dir()
+        .ok_or_else(|| "\u{65e0}\u{6cd5}\u{786e}\u{5b9a}\u{5f53}\u{524d} Windows \u{7528}\u{6237}\u{76ee}\u{5f55}".to_owned())?;
+    let sessions_root = catalog::temporary_sessions_root(&home_dir);
+    let date = Local::now().format("%Y-%m-%d").to_string();
+    create_unique_temporary_directory(&sessions_root.join(date))
+}
+
+fn create_unique_temporary_directory(date_root: &Path) -> Result<PathBuf, String> {
+    fs::create_dir_all(date_root).map_err(|error| {
+        format!(
+            "\u{65e0}\u{6cd5}\u{521b}\u{5efa}\u{4e34}\u{65f6}\u{4f1a}\u{8bdd}\u{76ee}\u{5f55}: {error}"
+        )
+    })?;
+
+    for index in 1..=10_000_u32 {
+        let name = if index == 1 {
+            "new-chat".to_owned()
+        } else {
+            format!("new-chat-{index}")
+        };
+        let candidate = date_root.join(name);
+        match fs::create_dir(&candidate) {
+            Ok(()) => return Ok(candidate),
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => {
+                return Err(format!(
+                    "\u{65e0}\u{6cd5}\u{521b}\u{5efa}\u{4e34}\u{65f6}\u{4f1a}\u{8bdd}\u{76ee}\u{5f55}: {error}"
+                ));
+            }
+        }
+    }
+
+    Err("\u{5f53}\u{5929}\u{4e34}\u{65f6}\u{4f1a}\u{8bdd}\u{76ee}\u{5f55}\u{6570}\u{91cf}\u{5df2}\u{8fbe}\u{5230}\u{4e0a}\u{9650}".to_owned())
 }
 
 fn unavailable_status(provider: SessionProvider) -> CliStatus {
@@ -420,6 +474,23 @@ mod tests {
             ),
             "& 'C:\\Tools\\codex.cmd' '--yolo'"
         );
+    }
+
+    #[test]
+    fn creates_numbered_temporary_directories_without_overwriting() {
+        let root = env::temp_dir().join(format!("ccsm-temporary-{}", Uuid::new_v4()));
+        let date_root = root.join("2026-08-18");
+        fs::create_dir_all(date_root.join("new-chat")).expect("create first fixture");
+
+        let second =
+            create_unique_temporary_directory(&date_root).expect("create second directory");
+        assert_eq!(
+            second.file_name().and_then(|name| name.to_str()),
+            Some("new-chat-2")
+        );
+        assert!(second.is_dir());
+
+        fs::remove_dir_all(root).expect("remove temporary fixture");
     }
 
     #[test]

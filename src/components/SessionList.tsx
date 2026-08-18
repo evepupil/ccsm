@@ -10,6 +10,7 @@ interface SessionListProps {
   selectedSessionKeys: ReadonlySet<SessionKey>;
   selectionMode: boolean;
   showProject: boolean;
+  showProjectPath: boolean;
   sort: SessionSort;
   onCopyId: (sessionId: string) => void;
   onResume: (session: SessionSummary, fork: boolean) => void;
@@ -58,6 +59,7 @@ export function SessionList({
   selectedSessionKeys,
   selectionMode,
   showProject,
+  showProjectPath,
   sort,
   onCopyId,
   onResume,
@@ -85,6 +87,7 @@ export function SessionList({
                   selectable={selectionMode}
                   selected={selectedSessionKeys.has(sessionKey(session))}
                   showProject={showProject}
+                  showProjectPath={showProjectPath}
                   launching={launchingSessionKey === key}
                   launchBlocked={launchingSessionKey !== null}
                   onArchive={onArchive}

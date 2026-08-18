@@ -19,6 +19,7 @@ export interface ProjectSummary {
   id: string;
   name: string;
   path: string;
+  isTemporary: boolean;
   lastActivity: string;
   sessionCount: number;
   totalSize: number;
@@ -57,6 +58,7 @@ export interface LaunchResult {
 export interface NewSessionResult {
   provider: SessionProvider;
   terminal: string;
+  workingDirectory: string;
   highestPermissions: boolean;
 }
 
