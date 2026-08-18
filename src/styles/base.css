@@ -21,6 +21,10 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+.toast {
+  border-radius: var(--radius-md);
+}
+
 button,
 input,
 select {
