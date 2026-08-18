@@ -2,6 +2,7 @@ node_modules/
 dist/
 src-tauri/target/
 src-tauri/target-review/
+src-tauri/target-spacing/
 src-tauri/gen/
 src-tauri/icons/android/
 src-tauri/icons/ios/

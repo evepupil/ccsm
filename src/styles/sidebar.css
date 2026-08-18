@@ -2,7 +2,7 @@
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: auto 78px 38px minmax(0, 1fr) 42px;
+  grid-template-rows: auto 88px 38px minmax(0, 1fr) 42px;
   border-right: 1px solid var(--sidebar-border);
   color: var(--sidebar-text);
   background: var(--sidebar);
@@ -197,7 +197,7 @@
 .temporary-session-card {
   position: relative;
   min-width: 0;
-  min-height: 42px;
+  min-height: 52px;
   border-radius: var(--radius-md);
   background: transparent;
   transition: background-color 150ms ease;
@@ -217,11 +217,11 @@
   display: grid;
   width: 100%;
   min-width: 0;
-  min-height: 42px;
+  min-height: 52px;
   grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
-  padding: 5px 7px;
+  padding: 6px 8px;
   border: 0;
   border-radius: var(--radius-md);
   color: var(--sidebar-text);
@@ -252,7 +252,7 @@
 .temporary-add-button {
   position: absolute;
   top: 50%;
-  right: 7px;
+  right: 8px;
   z-index: 1;
   display: grid;
   width: 28px;
