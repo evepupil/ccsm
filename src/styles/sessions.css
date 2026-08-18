@@ -467,6 +467,7 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  counter-reset: preview-item;
 }
 
 .message-preview-list li {
@@ -477,12 +478,13 @@
   color: var(--text-secondary);
   font-size: 11px;
   line-height: 1.45;
+  counter-increment: preview-item;
 }
 
 .message-preview-list li::before {
   width: 18px;
   color: var(--text-muted);
-  content: counter(list-item);
+  content: counter(preview-item);
   font-family: var(--font-mono);
   font-size: 10px;
   text-align: right;
