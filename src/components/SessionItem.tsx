@@ -13,7 +13,7 @@ import {
 
 import { formatAbsoluteTime, formatCount, formatRelativeTime } from "../lib/format";
 import type { SessionSummary } from "../types";
-import { ProviderLogo } from "./ProviderLogo";
+import { MessagePreviewPopover } from "./MessagePreviewPopover";
 
 interface SessionItemProps {
   archived: boolean;
@@ -76,9 +76,7 @@ export function SessionItem({
           </label>
         )}
       </div>
-      <span className={`session-provider-icon ${session.provider}`} aria-hidden="true">
-        <ProviderLogo provider={session.provider} />
-      </span>
+      <MessagePreviewPopover session={session} />
 
       <div className="session-copy">
         <div className="session-heading-line">

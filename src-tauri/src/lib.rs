@@ -1,7 +1,10 @@
 mod catalog;
 mod launcher;
+mod message_previews;
 mod models;
 mod providers;
+
+use std::path::Path;
 
 use models::{CliStatus, LaunchResult, NewSessionResult, SessionCatalog, SessionProvider};
 
@@ -13,6 +16,15 @@ fn scan_session_catalog() -> Result<SessionCatalog, String> {
 #[tauri::command]
 fn get_cli_statuses() -> Vec<CliStatus> {
     launcher::cli_statuses()
+}
+
+#[tauri::command]
+fn get_user_message_previews(
+    provider: SessionProvider,
+    source_path: String,
+    limit: usize,
+) -> Result<Vec<String>, String> {
+    message_previews::read_user_message_previews(provider, Path::new(&source_path), limit)
 }
 
 #[tauri::command]
@@ -40,6 +52,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             scan_session_catalog,
             get_cli_statuses,
+            get_user_message_previews,
             resume_session,
             start_new_session
         ])

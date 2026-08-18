@@ -6,6 +6,18 @@ export function scanSessionCatalog(): Promise<SessionCatalog> {
   return invoke<SessionCatalog>("scan_session_catalog");
 }
 
+export function getUserMessagePreviews(
+  provider: SessionProvider,
+  sourcePath: string,
+  limit: number,
+): Promise<string[]> {
+  return invoke<string[]>("get_user_message_previews", {
+    provider,
+    sourcePath,
+    limit,
+  });
+}
+
 export function resumeSession(
   provider: SessionProvider,
   sessionId: string,
