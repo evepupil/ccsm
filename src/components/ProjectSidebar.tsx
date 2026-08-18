@@ -106,9 +106,11 @@ export function ProjectSidebar({
           <span>聊天</span>
         </div>
         {showTemporaryProject && (
-          <div className="temporary-session-row">
+          <div
+            className={`temporary-session-card ${selectedProjectId === TEMPORARY_PROJECT_ID ? "is-selected" : ""} ${temporarySessionLaunching ? "is-loading" : ""}`}
+          >
             <button
-              className={`temporary-session-item ${selectedProjectId === TEMPORARY_PROJECT_ID ? "is-selected" : ""}`}
+              className="temporary-session-item"
               type="button"
               aria-pressed={selectedProjectId === TEMPORARY_PROJECT_ID}
               onClick={() => onSelectProject(TEMPORARY_PROJECT_ID)}

@@ -194,12 +194,23 @@
   padding: 0 6px;
 }
 
-.temporary-session-row {
-  display: grid;
+.temporary-session-card {
+  position: relative;
   min-width: 0;
-  grid-template-columns: minmax(0, 1fr) 32px;
-  align-items: center;
-  gap: 4px;
+  min-height: 42px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  transition: background-color 150ms ease;
+}
+
+.temporary-session-card:hover,
+.temporary-session-card:focus-within,
+.temporary-session-card.is-selected {
+  background: var(--sidebar-selected);
+}
+
+.temporary-session-card.is-selected {
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .temporary-session-item {
@@ -218,15 +229,6 @@
   text-align: left;
 }
 
-.temporary-session-item:hover,
-.temporary-session-item.is-selected {
-  background: var(--sidebar-selected);
-}
-
-.temporary-session-item.is-selected {
-  box-shadow: inset 3px 0 0 var(--accent);
-}
-
 .temporary-session-icon {
   display: grid;
   width: 28px;
@@ -243,27 +245,53 @@
   height: 14px;
 }
 
+.temporary-session-card .project-session-count {
+  transition: opacity 150ms ease;
+}
+
 .temporary-add-button {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  z-index: 1;
   display: grid;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   place-items: center;
   padding: 0;
-  border: 1px solid var(--sidebar-border);
-  border-radius: var(--radius-md);
-  color: #b9c5c1;
-  background: var(--sidebar-raised);
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--sidebar-muted);
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition:
+    color 150ms ease,
+    background-color 150ms ease,
+    opacity 150ms ease;
+}
+
+.temporary-session-card:hover .project-session-count,
+.temporary-session-card:focus-within .project-session-count,
+.temporary-session-card.is-loading .project-session-count {
+  opacity: 0;
+}
+
+.temporary-session-card:hover .temporary-add-button,
+.temporary-session-card:focus-within .temporary-add-button,
+.temporary-session-card.is-loading .temporary-add-button {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .temporary-add-button:hover:not(:disabled) {
-  border-color: #4c7569;
-  color: var(--sidebar-text);
+  color: var(--accent);
   background: var(--sidebar-hover);
 }
 
 .temporary-add-button:disabled {
   cursor: wait;
-  opacity: 0.52;
 }
 
 .temporary-add-button svg {
