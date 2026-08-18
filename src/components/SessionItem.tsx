@@ -58,7 +58,7 @@ export function SessionItem({
 
   return (
     <article
-      className={`session-card ${selected ? "is-selected" : ""}`}
+      className={`session-card ${selected ? "is-selected" : ""} ${selectable ? "is-selectable" : ""}`}
       data-session-id={session.id}
     >
       <div className="session-selection-slot">

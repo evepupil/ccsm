@@ -269,7 +269,7 @@
 .session-card {
   display: grid;
   min-height: 82px;
-  grid-template-columns: 28px 36px minmax(0, 1fr) 94px 160px;
+  grid-template-columns: 36px minmax(0, 1fr) 94px 160px;
   align-items: center;
   gap: 12px;
   padding: 11px 12px;
@@ -280,21 +280,30 @@
     box-shadow 150ms ease;
 }
 
+.session-card.is-selectable {
+  grid-template-columns: 24px 36px minmax(0, 1fr) 94px 160px;
+  column-gap: 8px;
+}
+
 .session-card.is-selected {
   background: var(--accent-soft);
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .session-selection-slot {
-  display: grid;
-  width: 28px;
+  display: none;
+  width: 24px;
   min-height: 32px;
   place-items: center;
 }
 
+.session-card.is-selectable .session-selection-slot {
+  display: grid;
+}
+
 .session-selection {
   display: grid;
-  width: 28px;
+  width: 24px;
   height: 32px;
   place-items: center;
 }
@@ -577,7 +586,11 @@
 
 @media (max-width: 1000px) {
   .session-card {
-    grid-template-columns: 28px 36px minmax(0, 1fr) 160px;
+    grid-template-columns: 36px minmax(0, 1fr) 160px;
+  }
+
+  .session-card.is-selectable {
+    grid-template-columns: 24px 36px minmax(0, 1fr) 160px;
   }
 
   .session-activity {
@@ -601,6 +614,10 @@
   .session-card {
     gap: 9px;
     padding: 10px;
+  }
+
+  .session-card.is-selectable {
+    column-gap: 7px;
   }
 
   .session-meta .model-meta {
