@@ -68,7 +68,6 @@ select:focus-visible {
 .workspace-title-line,
 .workspace-actions,
 .content-heading,
-.source-summary,
 .session-heading-line,
 .session-meta,
 .session-id-line,
@@ -108,7 +107,7 @@ select:focus-visible {
   display: grid;
   min-width: 0;
   min-height: 0;
-  grid-template-rows: auto 38px minmax(0, 1fr) 58px;
+  grid-template-rows: auto 38px minmax(0, 1fr) 42px;
   border-right: 1px solid var(--sidebar-border);
   color: var(--sidebar-text);
   background: var(--sidebar);
@@ -142,9 +141,9 @@ select:focus-visible {
   display: flex;
   min-width: 0;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 9px 10px 9px 13px;
+  justify-content: flex-start;
+  gap: 7px;
+  padding: 5px 10px 5px 13px;
   border-top: 1px solid var(--sidebar-border);
   background: color-mix(in srgb, var(--sidebar) 88%, #000000);
 }

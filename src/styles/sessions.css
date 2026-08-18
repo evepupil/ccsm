@@ -579,11 +579,6 @@
   font-size: 12px;
 }
 
-.retry-button {
-  width: max-content;
-  margin: 14px auto 0;
-}
-
 @media (max-width: 1000px) {
   .session-card {
     grid-template-columns: 36px minmax(0, 1fr) 160px;

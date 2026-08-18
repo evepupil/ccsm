@@ -1,12 +1,5 @@
-import {
-  AlertCircle,
-  LoaderCircle,
-  MessageSquareOff,
-  Plus,
-  RefreshCw,
-  ShieldAlert,
-} from "lucide-react";
-import { Button, Spinner } from "@heroui/react";
+import { AlertCircle, LoaderCircle, MessageSquareOff, Plus, ShieldAlert } from "lucide-react";
+import { Spinner } from "@heroui/react";
 
 import type { SessionKey } from "../lib/archive";
 import type { ProjectSummary, SessionProvider, SessionSort, SessionSummary } from "../types";
@@ -39,7 +32,6 @@ interface SessionWorkspaceProps {
   onClearSelection: () => void;
   onHighestPermissionsChange: (enabled: boolean) => void;
   onNewSession: () => void;
-  onRefresh: () => void;
   onResume: (session: SessionSummary, fork: boolean) => void;
   onSelectAll: () => void;
   onShowArchivedChange: (show: boolean) => void;
@@ -75,7 +67,6 @@ export function SessionWorkspace({
   onClearSelection,
   onHighestPermissionsChange,
   onNewSession,
-  onRefresh,
   onResume,
   onSelectAll,
   onShowArchivedChange,
@@ -154,10 +145,6 @@ export function SessionWorkspace({
             </span>
             <h3>无法读取本机会话</h3>
             <p>{error}</p>
-            <Button variant="outline" size="sm" className="retry-button" onPress={onRefresh}>
-              <RefreshCw aria-hidden="true" />
-              重试
-            </Button>
           </div>
         ) : initialLoading ? (
           <div className="loading-state" role="status">

@@ -41,17 +41,6 @@ export default function App() {
     launcher.launchingSessionKey ===
       newSessionLaunchKey(sessionCatalog.provider, sessionCatalog.selectedProject.id),
   );
-  const sessionCount = projects.reduce(
-    (total, project) =>
-      total +
-      project.sessions.filter(
-        (session) =>
-          session.provider === sessionCatalog.provider &&
-          (filters.showArchived || !archive.isArchived(session)),
-      ).length,
-    0,
-  );
-
   useEffect(() => {
     selection.clearSelection();
   }, [
@@ -111,13 +100,8 @@ export default function App() {
           selectedProjectId={sessionCatalog.selectedProjectId}
           searchQuery={filters.searchQuery}
           provider={sessionCatalog.provider}
-          loading={sessionCatalog.loading}
-          scannedAt={sessionCatalog.catalog?.scannedAt ?? null}
-          sessionCount={sessionCount}
           showArchived={filters.showArchived}
-          warning={sessionCatalog.catalog?.warnings[0] ?? null}
           onProviderChange={sessionCatalog.switchProvider}
-          onRefresh={() => void sessionCatalog.refresh()}
           onSearchChange={filters.setSearchQuery}
           onSelectProject={selectProject}
         />
@@ -145,7 +129,6 @@ export default function App() {
           onArchive={(session, archived) => updateArchive([session], archived)}
           onArchiveSelected={archiveSelected}
           onClearSelection={selection.clearSelection}
-          onRefresh={() => void sessionCatalog.refresh()}
           onSortChange={filters.setSort}
           onSelectAll={() => selection.selectSessions(filters.sessions)}
           onShowArchivedChange={filters.setShowArchived}

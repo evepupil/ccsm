@@ -17,11 +17,8 @@
     search: document.querySelector("#session-search"),
     searchField: document.querySelector(".sidebar-search"),
     clearSearch: document.querySelector("#clear-search"),
-    refresh: document.querySelector("#refresh-button"),
     projectList: document.querySelector("#project-list"),
     projectCount: document.querySelector("#project-count"),
-    totalSessionCount: document.querySelector("#total-session-count"),
-    scanStatus: document.querySelector("#scan-status"),
     workspaceName: document.querySelector("#workspace-name"),
     workspacePath: document.querySelector("#workspace-path"),
     workspaceCount: document.querySelector("#workspace-count"),
@@ -281,18 +278,10 @@
       .join("");
   }
 
-  function renderStatus() {
-    const total = Object.values(data)
-      .flat()
-      .reduce((sum, project) => sum + project.sessions.length, 0);
-    elements.totalSessionCount.textContent = `${total} 个本机会话`;
-  }
-
   function render() {
     renderProviders();
     renderProjects();
     renderSessions();
-    renderStatus();
     elements.searchField.classList.toggle("has-value", Boolean(state.query));
     elements.permissionWarning.hidden = !state.highestPermissions;
     window.lucide?.createIcons();
@@ -380,18 +369,6 @@
   elements.permission.addEventListener("change", (event) => {
     state.highestPermissions = event.target.checked;
     render();
-  });
-
-  elements.refresh.addEventListener("click", () => {
-    elements.refresh.classList.add("is-refreshing");
-    elements.refresh.disabled = true;
-    elements.scanStatus.textContent = "正在扫描...";
-    window.setTimeout(() => {
-      elements.refresh.classList.remove("is-refreshing");
-      elements.refresh.disabled = false;
-      elements.scanStatus.textContent = "刚刚更新";
-      showToast("扫描完成，会话列表已更新");
-    }, 750);
   });
 
   elements.sessionGroups.addEventListener("click", (event) => {

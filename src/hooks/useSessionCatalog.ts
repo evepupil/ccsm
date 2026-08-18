@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { scanSessionCatalog } from "../api";
+import { createSessionRefreshGate, startSessionAutoRefresh } from "../lib/autoRefresh";
 import { toErrorMessage } from "../lib/presentation";
 import type { SessionProvider } from "../types";
 
@@ -32,13 +33,17 @@ export function useSessionCatalog() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(readStoredProjectId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const mountedRef = useRef(true);
   const providerRef = useRef(provider);
 
   const refresh = useCallback(async () => {
+    if (!mountedRef.current) return;
+
     setLoading(true);
     setError(null);
     try {
       const nextCatalog = await scanSessionCatalog();
+      if (!mountedRef.current) return;
       setCatalog(nextCatalog);
       setSelectedProjectId((current) => {
         const currentProject = nextCatalog.projects.find((project) => project.id === current);
@@ -50,15 +55,27 @@ export function useSessionCatalog() {
         return nextId;
       });
     } catch (cause) {
-      setError(toErrorMessage(cause));
+      if (mountedRef.current) setError(toErrorMessage(cause));
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
 
+  const refreshIfIdle = useMemo(() => createSessionRefreshGate(refresh), [refresh]);
+
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    void refreshIfIdle();
+    return startSessionAutoRefresh(() => {
+      void refreshIfIdle();
+    });
+  }, [refreshIfIdle]);
 
   const selectedProject = useMemo(
     () => catalog?.projects.find((project) => project.id === selectedProjectId) ?? null,
@@ -94,7 +111,6 @@ export function useSessionCatalog() {
     provider,
     selectedProject,
     selectedProjectId,
-    refresh,
     selectProject,
     switchProvider,
   };

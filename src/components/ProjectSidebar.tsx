@@ -1,5 +1,5 @@
-import { Database, FolderCode, RefreshCw } from "lucide-react";
-import { Button, ListBox, SearchField, Tabs, Tooltip } from "@heroui/react";
+import { FolderCode, Settings2 } from "lucide-react";
+import { Button, ListBox, SearchField, Tabs } from "@heroui/react";
 
 import { isSessionArchived, type SessionKey } from "../lib/archive";
 import { formatRelativeTime, normalizeSearch } from "../lib/format";
@@ -9,42 +9,24 @@ import { ProviderLogo } from "./ProviderLogo";
 
 interface ProjectSidebarProps {
   archivedSessionKeys: ReadonlySet<SessionKey>;
-  loading: boolean;
   projects: ProjectSummary[];
   provider: SessionProvider;
-  scannedAt: string | null;
   searchQuery: string;
   selectedProjectId: string | null;
-  sessionCount: number;
   showArchived: boolean;
-  warning: string | null;
   onProviderChange: (provider: SessionProvider) => void;
-  onRefresh: () => void;
   onSearchChange: (query: string) => void;
   onSelectProject: (projectId: string) => void;
 }
 
-function scanStatus(loading: boolean, scannedAt: string | null, warning: string | null): string {
-  if (loading) return "正在扫描...";
-  if (warning) return warning;
-  if (!scannedAt) return "尚未扫描";
-  const relative = formatRelativeTime(scannedAt);
-  return relative === "刚刚" ? "刚刚更新" : `${relative}更新`;
-}
-
 export function ProjectSidebar({
   archivedSessionKeys,
-  loading,
   projects,
   provider,
-  scannedAt,
   searchQuery,
   selectedProjectId,
-  sessionCount,
   showArchived,
-  warning,
   onProviderChange,
-  onRefresh,
   onSearchChange,
   onSelectProject,
 }: ProjectSidebarProps) {
@@ -148,26 +130,10 @@ export function ProjectSidebar({
       )}
 
       <footer className="sidebar-footer">
-        <div className="source-summary">
-          <Database aria-hidden="true" />
-          <span>
-            <strong>{sessionCount} 个本机会话</strong>
-            <small title={warning ?? undefined}>{scanStatus(loading, scannedAt, warning)}</small>
-          </span>
-        </div>
-        <Tooltip delay={500}>
-          <Button
-            isIconOnly
-            variant="ghost"
-            className="icon-button sidebar-refresh"
-            isDisabled={loading}
-            aria-label="重新扫描"
-            onPress={onRefresh}
-          >
-            <RefreshCw className={loading ? "is-spinning" : ""} aria-hidden="true" />
-          </Button>
-          <Tooltip.Content>重新扫描</Tooltip.Content>
-        </Tooltip>
+        <Settings2 className="settings-logo" aria-hidden="true" />
+        <Button variant="ghost" className="settings-button" aria-label="设置">
+          设置
+        </Button>
       </footer>
     </aside>
   );
