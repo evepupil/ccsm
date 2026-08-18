@@ -3,7 +3,7 @@ mod launcher;
 mod models;
 mod providers;
 
-use models::{CliStatus, LaunchResult, SessionCatalog, SessionProvider};
+use models::{CliStatus, LaunchResult, NewSessionResult, SessionCatalog, SessionProvider};
 
 #[tauri::command]
 fn scan_session_catalog() -> Result<SessionCatalog, String> {
@@ -25,13 +25,23 @@ fn resume_session(
     launcher::resume_session(provider, &session_id, fork, highest_permissions)
 }
 
+#[tauri::command]
+fn start_new_session(
+    provider: SessionProvider,
+    project_id: String,
+    highest_permissions: bool,
+) -> Result<NewSessionResult, String> {
+    launcher::start_new_session(provider, &project_id, highest_permissions)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             scan_session_catalog,
             get_cli_statuses,
-            resume_session
+            resume_session,
+            start_new_session
         ])
         .run(tauri::generate_context!())
         .expect("error while running CCSM");

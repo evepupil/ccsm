@@ -1,7 +1,11 @@
 import type { ProjectSummary, SessionProvider, SessionSort, SessionSummary } from "../types";
+import { isSessionArchived, type SessionKey } from "./archive";
 import { normalizeSearch } from "./format";
 
+const EMPTY_ARCHIVED_SESSION_KEYS: ReadonlySet<SessionKey> = new Set();
+
 interface SessionFilter {
+  archivedSessionKeys?: ReadonlySet<SessionKey>;
   projects: ProjectSummary[];
   selectedProjectId: string | null;
   searchQuery: string;
@@ -47,6 +51,7 @@ export function selectVisibleProjects({
 }
 
 export function selectVisibleSessions({
+  archivedSessionKeys = EMPTY_ARCHIVED_SESSION_KEYS,
   projects,
   selectedProjectId,
   searchQuery,
@@ -61,7 +66,7 @@ export function selectVisibleSessions({
     : (selectedProject?.sessions ?? []);
 
   const filtered = source.filter((session) => {
-    if (!showArchived && session.isArchived) return false;
+    if (!showArchived && isSessionArchived(session, archivedSessionKeys)) return false;
     if (session.provider !== providerFilter) return false;
     if (!normalizedQuery) return true;
     const haystack = [

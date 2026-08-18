@@ -4,14 +4,17 @@ import { normalizeSearch } from "../lib/format";
 import { highestPermissionWarning } from "../lib/launch";
 import { selectVisibleSessions } from "../lib/sessions";
 import type { ProjectSummary, SessionProvider, SessionSort } from "../types";
+import type { SessionKey } from "../lib/archive";
 
 interface UseSessionFiltersOptions {
+  archivedSessionKeys: ReadonlySet<SessionKey>;
   projects: ProjectSummary[];
   provider: SessionProvider;
   selectedProjectId: string | null;
 }
 
 export function useSessionFilters({
+  archivedSessionKeys,
   projects,
   provider,
   selectedProjectId,
@@ -24,6 +27,7 @@ export function useSessionFilters({
   const sessions = useMemo(
     () =>
       selectVisibleSessions({
+        archivedSessionKeys,
         projects,
         selectedProjectId,
         searchQuery,
@@ -31,7 +35,7 @@ export function useSessionFilters({
         showArchived,
         sort,
       }),
-    [projects, provider, searchQuery, selectedProjectId, showArchived, sort],
+    [archivedSessionKeys, projects, provider, searchQuery, selectedProjectId, showArchived, sort],
   );
 
   return {

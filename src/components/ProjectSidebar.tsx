@@ -1,12 +1,14 @@
 import { Database, FolderCode, RefreshCw } from "lucide-react";
 import { Button, ListBox, SearchField, Tabs, Tooltip } from "@heroui/react";
 
+import { isSessionArchived, type SessionKey } from "../lib/archive";
 import { formatRelativeTime, normalizeSearch } from "../lib/format";
 import { selectVisibleProjects } from "../lib/sessions";
 import type { ProjectSummary, SessionProvider } from "../types";
 import { ProviderLogo } from "./ProviderLogo";
 
 interface ProjectSidebarProps {
+  archivedSessionKeys: ReadonlySet<SessionKey>;
   loading: boolean;
   projects: ProjectSummary[];
   provider: SessionProvider;
@@ -31,6 +33,7 @@ function scanStatus(loading: boolean, scannedAt: string | null, warning: string 
 }
 
 export function ProjectSidebar({
+  archivedSessionKeys,
   loading,
   projects,
   provider,
@@ -119,7 +122,9 @@ export function ProjectSidebar({
         >
           {visibleProjects.map((project) => {
             const providerSessions = project.sessions.filter(
-              (session) => session.provider === provider && (showArchived || !session.isArchived),
+              (session) =>
+                session.provider === provider &&
+                (showArchived || !isSessionArchived(session, archivedSessionKeys)),
             );
             return (
               <ListBox.Item

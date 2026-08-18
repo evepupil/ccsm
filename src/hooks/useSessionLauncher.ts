@@ -1,10 +1,10 @@
 import { useCallback, useState } from "react";
 import { toast } from "@heroui/react";
 
-import { resumeSession } from "../api";
-import { launchSessionKey } from "../lib/launch";
+import { resumeSession, startNewSession } from "../api";
+import { launchSessionKey, newSessionLaunchKey } from "../lib/launch";
 import { providerLabel, toErrorMessage } from "../lib/presentation";
-import type { SessionSummary } from "../types";
+import type { SessionProvider, SessionSummary } from "../types";
 
 export function useSessionLauncher(highestPermissions: boolean) {
   const [launchingSessionKey, setLaunchingSessionKey] = useState<string | null>(null);
@@ -28,6 +28,25 @@ export function useSessionLauncher(highestPermissions: boolean) {
     [highestPermissions],
   );
 
+  const launchNew = useCallback(
+    async (provider: SessionProvider, projectId: string) => {
+      setLaunchingSessionKey(newSessionLaunchKey(provider, projectId));
+      try {
+        const result = await startNewSession(provider, projectId, highestPermissions);
+        toast.success(
+          `${result.terminal} 已启动 ${providerLabel(result.provider)} 新会话${
+            result.highestPermissions ? "（最高权限）" : ""
+          }`,
+        );
+      } catch (cause) {
+        toast.danger(toErrorMessage(cause));
+      } finally {
+        setLaunchingSessionKey(null);
+      }
+    },
+    [highestPermissions],
+  );
+
   const copySessionId = useCallback(async (sessionId: string) => {
     try {
       await navigator.clipboard.writeText(sessionId);
@@ -37,5 +56,5 @@ export function useSessionLauncher(highestPermissions: boolean) {
     }
   }, []);
 
-  return { copySessionId, launch, launchingSessionKey };
+  return { copySessionId, launch, launchNew, launchingSessionKey };
 }

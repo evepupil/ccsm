@@ -162,6 +162,8 @@
 .workspace-actions {
   flex: 0 0 auto;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .session-content {

@@ -1,13 +1,19 @@
+import { isSessionArchived, sessionKey, type SessionKey } from "../lib/archive";
 import type { SessionSort, SessionSummary } from "../types";
 import { SessionItem } from "./SessionItem";
 
 interface SessionListProps {
+  archivedSessionKeys: ReadonlySet<SessionKey>;
   launchingSessionKey: string | null;
+  onArchive: (session: SessionSummary, archived: boolean) => void;
   sessions: SessionSummary[];
+  selectedSessionKeys: ReadonlySet<SessionKey>;
+  selectionMode: boolean;
   showProject: boolean;
   sort: SessionSort;
   onCopyId: (sessionId: string) => void;
   onResume: (session: SessionSummary, fork: boolean) => void;
+  onToggleSelection: (session: SessionSummary) => void;
 }
 
 interface SessionGroup {
@@ -45,12 +51,17 @@ function groupSessions(sessions: SessionSummary[], sort: SessionSort): SessionGr
 }
 
 export function SessionList({
+  archivedSessionKeys,
   launchingSessionKey,
+  onArchive,
   sessions,
+  selectedSessionKeys,
+  selectionMode,
   showProject,
   sort,
   onCopyId,
   onResume,
+  onToggleSelection,
 }: SessionListProps) {
   const groups = groupSessions(sessions, sort);
 
@@ -64,16 +75,22 @@ export function SessionList({
           </div>
           <div className="session-list">
             {group.sessions.map((session) => {
-              const sessionKey = `${session.provider}:${session.id}`;
+              const key = sessionKey(session);
               return (
                 <SessionItem
-                  key={sessionKey}
+                  key={key}
+                  archived={isSessionArchived(session, archivedSessionKeys)}
+                  ccsmArchived={archivedSessionKeys.has(key)}
                   session={session}
+                  selectable={selectionMode}
+                  selected={selectedSessionKeys.has(sessionKey(session))}
                   showProject={showProject}
-                  launching={launchingSessionKey === sessionKey}
+                  launching={launchingSessionKey === key}
                   launchBlocked={launchingSessionKey !== null}
+                  onArchive={onArchive}
                   onResume={onResume}
                   onCopyId={onCopyId}
+                  onToggleSelection={onToggleSelection}
                 />
               );
             })}

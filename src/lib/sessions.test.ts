@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { sessionKey } from "./archive";
 import type { ProjectSummary, SessionSummary } from "../types";
 import { selectVisibleProjects, selectVisibleSessions } from "./sessions";
 
@@ -104,6 +105,33 @@ describe("selectVisibleSessions", () => {
     });
 
     expect(result.map((session) => session.title)).toEqual(["旧的归档记录", "实现会话管理器"]);
+  });
+
+  it("hides and shows CCSM archived sessions without changing source data", () => {
+    const archivedSessionKeys = new Set([sessionKey(baseSession)]);
+
+    expect(
+      selectVisibleSessions({
+        archivedSessionKeys,
+        projects,
+        selectedProjectId: "manager",
+        searchQuery: "",
+        providerFilter: "claude",
+        showArchived: false,
+        sort: "recent",
+      }),
+    ).toEqual([]);
+    expect(
+      selectVisibleSessions({
+        archivedSessionKeys,
+        projects,
+        selectedProjectId: "manager",
+        searchQuery: "",
+        providerFilter: "claude",
+        showArchived: true,
+        sort: "recent",
+      }).map((session) => session.title),
+    ).toEqual(["实现会话管理器", "旧的归档记录"]);
   });
 
   it("filters sessions by provider", () => {

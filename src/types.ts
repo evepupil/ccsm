@@ -54,4 +54,10 @@ export interface LaunchResult {
   highestPermissions: boolean;
 }
 
+export interface NewSessionResult {
+  provider: SessionProvider;
+  terminal: string;
+  highestPermissions: boolean;
+}
+
 export type SessionSort = "recent" | "title";

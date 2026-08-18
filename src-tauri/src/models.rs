@@ -98,3 +98,11 @@ pub struct LaunchResult {
     pub forked: bool,
     pub highest_permissions: bool,
 }
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewSessionResult {
+    pub provider: SessionProvider,
+    pub terminal: String,
+    pub highest_permissions: bool,
+}

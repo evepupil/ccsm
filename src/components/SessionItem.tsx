@@ -1,5 +1,6 @@
 import {
   Archive,
+  ArchiveRestore,
   Copy,
   Cpu,
   Folder,
@@ -15,21 +16,33 @@ import type { SessionSummary } from "../types";
 import { ProviderLogo } from "./ProviderLogo";
 
 interface SessionItemProps {
+  archived: boolean;
+  ccsmArchived: boolean;
   launchBlocked: boolean;
   launching: boolean;
   session: SessionSummary;
+  selectable: boolean;
+  selected: boolean;
   showProject: boolean;
+  onArchive: (session: SessionSummary, archived: boolean) => void;
   onCopyId: (sessionId: string) => void;
   onResume: (session: SessionSummary, fork: boolean) => void;
+  onToggleSelection: (session: SessionSummary) => void;
 }
 
 export function SessionItem({
+  archived,
+  ccsmArchived,
   launchBlocked,
   launching,
   session,
+  selectable,
+  selected,
   showProject,
+  onArchive,
   onCopyId,
   onResume,
+  onToggleSelection,
 }: SessionItemProps) {
   const usage =
     session.messageCount !== null
@@ -40,9 +53,26 @@ export function SessionItem({
   const model = session.model ?? session.cliVersion;
   const projectName = session.projectPath.split(/[\\/]/).filter(Boolean).at(-1);
   const actionsDisabled = !session.canResume || launchBlocked;
+  const archiveDisabled = launchBlocked || (session.isArchived && !ccsmArchived);
+  const archiveLabel = ccsmArchived ? "取消归档" : session.isArchived ? "已归档" : "归档";
 
   return (
-    <article className="session-card" data-session-id={session.id}>
+    <article
+      className={`session-card ${selected ? "is-selected" : ""}`}
+      data-session-id={session.id}
+    >
+      <div className="session-selection-slot">
+        {selectable && (
+          <label className="session-selection" title={selected ? "取消选择" : "选择会话"}>
+            <input
+              type="checkbox"
+              checked={selected}
+              aria-label={`${selected ? "取消选择" : "选择"} ${session.title}`}
+              onChange={() => onToggleSelection(session)}
+            />
+          </label>
+        )}
+      </div>
       <span className={`session-provider-icon ${session.provider}`} aria-hidden="true">
         <ProviderLogo provider={session.provider} />
       </span>
@@ -52,7 +82,7 @@ export function SessionItem({
           <h3 className="session-title" title={session.title}>
             {session.title}
           </h3>
-          {session.isArchived && (
+          {archived && (
             <span className="archived-badge">
               <Archive aria-hidden="true" />
               已归档
@@ -136,6 +166,16 @@ export function SessionItem({
           onClick={() => onResume(session, true)}
         >
           <GitFork aria-hidden="true" />
+        </button>
+        <button
+          className={`icon-button archive-button ${archived ? "is-archived" : ""}`}
+          type="button"
+          disabled={archiveDisabled}
+          title={archiveLabel}
+          aria-label={archiveLabel}
+          onClick={() => onArchive(session, !ccsmArchived)}
+        >
+          {ccsmArchived ? <ArchiveRestore aria-hidden="true" /> : <Archive aria-hidden="true" />}
         </button>
       </div>
     </article>

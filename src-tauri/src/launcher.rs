@@ -12,7 +12,7 @@ use uuid::Uuid;
 
 use crate::{
     catalog,
-    models::{CliStatus, LaunchResult, SessionProvider},
+    models::{CliStatus, LaunchResult, NewSessionResult, SessionProvider},
 };
 
 #[cfg(target_os = "windows")]
@@ -92,6 +92,40 @@ pub fn resume_session(
         provider,
         terminal,
         forked: fork,
+        highest_permissions,
+    })
+}
+
+pub fn start_new_session(
+    provider: SessionProvider,
+    project_id: &str,
+    highest_permissions: bool,
+) -> Result<NewSessionResult, String> {
+    let project_id = project_id.trim();
+    if project_id.is_empty() {
+        return Err("未选择项目".to_owned());
+    }
+
+    let catalog = catalog::scan_sessions().map_err(|error| error.to_string())?;
+    let project = catalog
+        .projects
+        .iter()
+        .find(|project| project.id == project_id && project.providers.contains(&provider))
+        .ok_or_else(|| format!("本机 {provider} 项目索引中找不到该项目"))?;
+
+    if !Path::new(&project.path).is_dir() {
+        return Err(format!("项目目录已不存在：{}", project.path));
+    }
+
+    let executable = find_cli(provider).ok_or_else(|| match provider {
+        SessionProvider::Claude => "未找到可用的 Claude Code CLI".to_owned(),
+        SessionProvider::Codex => "未找到可用的 Codex CLI".to_owned(),
+    })?;
+    let command = build_new_session_command(provider, &executable, highest_permissions);
+
+    launch_terminal(&project.path, &command).map(|terminal| NewSessionResult {
+        provider,
+        terminal,
         highest_permissions,
     })
 }
@@ -304,6 +338,19 @@ fn build_resume_command(
     build_powershell_invocation(executable, &arguments)
 }
 
+fn build_new_session_command(
+    provider: SessionProvider,
+    executable: &Path,
+    highest_permissions: bool,
+) -> String {
+    let arguments = match (provider, highest_permissions) {
+        (SessionProvider::Claude, true) => vec!["--dangerously-skip-permissions"],
+        (SessionProvider::Codex, true) => vec!["--yolo"],
+        (_, false) => Vec::new(),
+    };
+    build_powershell_invocation(executable, &arguments)
+}
+
 fn build_powershell_invocation(executable: &Path, arguments: &[&str]) -> String {
     let mut command = format!("& {}", quote_powershell(&executable.display().to_string()));
     for argument in arguments {
@@ -352,6 +399,26 @@ mod tests {
         assert_eq!(
             build_resume_command(SessionProvider::Codex, executable, SESSION_ID, true, true),
             "& 'C:\\Tools\\codex.cmd' 'fork' '--yolo' '00000000-0000-4000-8000-000000000001'"
+        );
+    }
+
+    #[test]
+    fn builds_new_session_commands_for_both_providers() {
+        assert_eq!(
+            build_new_session_command(
+                SessionProvider::Claude,
+                Path::new("C:\\Tools\\claude.exe"),
+                false
+            ),
+            "& 'C:\\Tools\\claude.exe'"
+        );
+        assert_eq!(
+            build_new_session_command(
+                SessionProvider::Codex,
+                Path::new("C:\\Tools\\codex.cmd"),
+                true
+            ),
+            "& 'C:\\Tools\\codex.cmd' '--yolo'"
         );
     }
 
