@@ -4,7 +4,7 @@
 
 CCSM is a local Windows desktop application for browsing Claude Code and Codex session history in one place. It groups both sources by their real project directories, provides search and filtering, and opens a terminal in the original project directory to resume or fork a session.
 
-> Current source version: `0.3.0`
+> Current source version: `0.4.0`
 
 ## Features
 
@@ -14,6 +14,10 @@ CCSM is a local Windows desktop application for browsing Claude Code and Codex s
 - Merges Claude Code and Codex sessions by their normalized project directory, with provider switching and cross-project search.
 - Supports archived-session filtering, sorting by recent activity or title, and grouping recent sessions into Today, Yesterday, This week, and Earlier.
 - Displays provider, title, activity time, message or token count, file size, Git branch, model, and CLI version.
+- Prioritizes user-defined session titles from Claude Code and Codex, then falls back through each provider's available title sources.
+- Supports CCSM-local archiving, multi-select, bulk archive and restore, and starting a new Claude Code or Codex session for the current project.
+- Provides a temporary-session project that groups both providers from temporary directories and refreshes the local catalog automatically.
+- Hovering or focusing the Claude/Codex logo at the left of a session row shows the five most recent user-message previews in order.
 - Supports resuming or forking sessions:
 
   | Provider    | Resume                 | Fork                                  |
@@ -35,7 +39,7 @@ CCSM is a local Windows desktop application for browsing Claude Code and Codex s
 ## Privacy and Security
 
 - CCSM reads local session data only. It does not modify, migrate, or delete the original files.
-- Full conversation bodies are read briefly on the local machine only when needed to derive titles and statistics. Sessions are never uploaded, and API keys are not stored.
+- Full conversation bodies are read briefly on the local machine only when needed for titles, statistics, or an on-demand preview of the five most recent user messages. Preview text stays in process memory; sessions are never uploaded and API keys are not stored.
 - Before launching a session, CCSM rescans and validates the Session ID and project directory. It will not launch a session when the directory no longer exists.
 - The terminal inherits the current Windows user's CLI configuration. Highest-permission mode is disabled by default, is not persisted locally, and keeps a visible warning while enabled.
 
