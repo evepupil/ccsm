@@ -15,7 +15,7 @@ CCSM 是一个面向 Windows 的本地桌面应用，用于统一浏览 Claude C
 - 支持归档筛选，以及按最近活动时间或标题排序；最近活动视图按今天、昨天、本周和更早分组。
 - 展示来源、标题、活动时间、消息数或 Token 数、文件大小、Git 分支、模型和 CLI 版本。
 - 优先显示 Claude Code 与 Codex 中的用户自定义会话标题；未设置时继续使用来源提供的标题回退。
-- 支持 CCSM 本地归档、会话多选、批量归档与恢复，以及按当前项目创建新的 Claude Code 或 Codex 会话。
+- 支持 CCSM 本地归档、会话多选、批量归档与恢复，以及按当前项目创建新的 Claude Code 或 Codex 会话；归档后默认从列表隐藏，可随时查看并恢复。
 - 支持临时会话项目，将临时目录中的两类会话集中管理，并在侧栏自动刷新会话目录。
 - 悬浮或聚焦会话列表左侧的 Claude/Codex logo，可查看按顺序排列的最近 5 条用户消息摘要。
 - 支持原会话续接和分叉续接：
@@ -27,6 +27,9 @@ CCSM 是一个面向 Windows 的本地桌面应用，用于统一浏览 Claude C
 
 - 续接时优先打开 Windows Terminal；未安装时回退到独立 PowerShell 窗口。
 - 可临时开启最高权限。Claude Code 使用 `--dangerously-skip-permissions`，Codex 使用 `--yolo`；该选项默认关闭并持续显示风险提示。
+
+## 效果图
+
 <img width="1772" height="1141" alt="exp_0" src="https://github.com/user-attachments/assets/172e5838-93cd-4e26-977c-0c6329c64a38" />
 
 ## 数据来源
@@ -40,13 +43,14 @@ CCSM 是一个面向 Windows 的本地桌面应用，用于统一浏览 Claude C
 ## 隐私与安全
 
 - CCSM 只读取本机会话数据，不修改、迁移或删除原始文件。
+- 归档状态只保存在 CCSM 本地；归档会从默认列表隐藏会话，原始 Claude Code、Codex 和 Desktop 文件保持不变。
 - 完整对话正文只在本地解析标题、统计信息或按需生成最近用户消息摘要时短暂读取；摘要只显示最近 5 条用户消息，保存在进程内缓存，不上传会话，也不保存 API Key。
 - 续接前会重新扫描并校验 Session ID 和项目目录；项目目录不存在时不会启动会话。
 - 续接终端继承当前 Windows 用户的 CLI 配置。最高权限默认关闭，不写入本地存储；开启后界面会持续显示风险提示。
 
 ## 下载
 
-Windows 安装包和便携版请前往 [GitHub Releases](https://github.com/evepupil/ccsm/releases)。未配置代码签名的构建在首次运行时可能触发 Windows SmartScreen 提示。
+当前版本请前往 [CCSM 0.4.0 发布页](https://github.com/evepupil/ccsm/releases/tag/v0.4.0)下载 Windows x64 NSIS 或 MSI 安装包。未配置代码签名的构建在首次运行时可能触发 Windows SmartScreen 提示。
 
 ## 环境要求
 

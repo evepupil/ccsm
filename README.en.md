@@ -15,7 +15,7 @@ CCSM is a local Windows desktop application for browsing Claude Code and Codex s
 - Supports archived-session filtering, sorting by recent activity or title, and grouping recent sessions into Today, Yesterday, This week, and Earlier.
 - Displays provider, title, activity time, message or token count, file size, Git branch, model, and CLI version.
 - Prioritizes user-defined session titles from Claude Code and Codex, then falls back through each provider's available title sources.
-- Supports CCSM-local archiving, multi-select, bulk archive and restore, and starting a new Claude Code or Codex session for the current project.
+- Supports CCSM-local archiving, multi-select, bulk archive and restore, and starting a new Claude Code or Codex session for the current project. Archived sessions are hidden from the default list and can be viewed and restored at any time.
 - Provides a temporary-session project that groups both providers from temporary directories and refreshes the local catalog automatically.
 - Hovering or focusing the Claude/Codex logo at the left of a session row shows the five most recent user-message previews in order.
 - Supports resuming or forking sessions:
@@ -28,6 +28,10 @@ CCSM is a local Windows desktop application for browsing Claude Code and Codex s
 - Opens Windows Terminal when available and falls back to a standalone PowerShell window.
 - Can temporarily enable the highest-permission mode. Claude Code uses `--dangerously-skip-permissions` and Codex uses `--yolo`; the option is disabled by default and keeps a visible warning when enabled.
 
+## Screenshot
+
+<img width="1772" height="1141" alt="exp_0" src="https://github.com/user-attachments/assets/172e5838-93cd-4e26-977c-0c6329c64a38" />
+
 ## Data Sources
 
 | Source         | Default location                                                        | Read data                                              |
@@ -39,13 +43,14 @@ CCSM is a local Windows desktop application for browsing Claude Code and Codex s
 ## Privacy and Security
 
 - CCSM reads local session data only. It does not modify, migrate, or delete the original files.
+- Archive state is stored locally by CCSM. Archiving hides a session from the default list while leaving the original Claude Code, Codex, and Desktop files unchanged.
 - Full conversation bodies are read briefly on the local machine only when needed for titles, statistics, or an on-demand preview of the five most recent user messages. Preview text stays in process memory; sessions are never uploaded and API keys are not stored.
 - Before launching a session, CCSM rescans and validates the Session ID and project directory. It will not launch a session when the directory no longer exists.
 - The terminal inherits the current Windows user's CLI configuration. Highest-permission mode is disabled by default, is not persisted locally, and keeps a visible warning while enabled.
 
 ## Download
 
-Windows installers and portable builds are published on [GitHub Releases](https://github.com/evepupil/ccsm/releases). Builds without code signing may trigger a Windows SmartScreen warning on first launch.
+Download the Windows x64 NSIS or MSI installer from the [CCSM 0.4.0 release page](https://github.com/evepupil/ccsm/releases/tag/v0.4.0). Builds without code signing may trigger a Windows SmartScreen warning on first launch.
 
 ## Requirements
 
