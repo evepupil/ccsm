@@ -1,8 +1,8 @@
 import { useCallback, useState } from "react";
 import { toast } from "@heroui/react";
 
-import { resumeSession, startNewSession } from "../api";
-import { launchSessionKey, newSessionLaunchKey } from "../lib/launch";
+import { restoreWorkspace, resumeSession, startNewSession } from "../api";
+import { launchSessionKey, newSessionLaunchKey, workspaceLaunchKey } from "../lib/launch";
 import { providerLabel, toErrorMessage } from "../lib/presentation";
 import { TEMPORARY_PROJECT_ID } from "../lib/temporary";
 import type { SessionProvider, SessionSummary } from "../types";
@@ -51,6 +51,29 @@ export function useSessionLauncher(highestPermissions: boolean) {
     [highestPermissions],
   );
 
+  const restoreWorkspaceSessions = useCallback(
+    async (projectId: string) => {
+      setLaunchingSessionKey(workspaceLaunchKey(projectId));
+      try {
+        const result = await restoreWorkspace(projectId, highestPermissions);
+        if (result.restoredCount === 0) {
+          toast.success("当前项目没有发现可恢复的已打开会话");
+        } else {
+          const location = result.oneWindow ? "同一窗口的不同标签页" : result.terminal;
+          toast.success(`已在${location}恢复 ${result.restoredCount} 个会话`);
+        }
+        if (result.skippedCount > 0) {
+          toast.danger(`${result.skippedCount} 个已打开会话未能恢复`);
+        }
+      } catch (cause) {
+        toast.danger(toErrorMessage(cause));
+      } finally {
+        setLaunchingSessionKey(null);
+      }
+    },
+    [highestPermissions],
+  );
+
   const copySessionId = useCallback(async (sessionId: string) => {
     try {
       await navigator.clipboard.writeText(sessionId);
@@ -60,5 +83,11 @@ export function useSessionLauncher(highestPermissions: boolean) {
     }
   }, []);
 
-  return { copySessionId, launch, launchNew, launchingSessionKey };
+  return {
+    copySessionId,
+    launch,
+    launchNew,
+    launchingSessionKey,
+    restoreWorkspace: restoreWorkspaceSessions,
+  };
 }

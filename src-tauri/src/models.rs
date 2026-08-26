@@ -31,9 +31,19 @@ impl fmt::Display for SessionProvider {
 #[serde(rename_all = "camelCase")]
 pub struct SessionCatalog {
     pub projects: Vec<ProjectSummary>,
+    pub open_sessions: Vec<OpenSessionSummary>,
     pub scanned_at: String,
     pub sources: Vec<SessionSource>,
     pub warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenSessionSummary {
+    pub session_id: String,
+    pub provider: SessionProvider,
+    pub project_path: String,
+    pub working_directory: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -101,6 +111,7 @@ pub struct LaunchResult {
     pub terminal: String,
     pub forked: bool,
     pub highest_permissions: bool,
+    pub reused_window: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -110,4 +121,14 @@ pub struct NewSessionResult {
     pub terminal: String,
     pub working_directory: String,
     pub highest_permissions: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceRestoreResult {
+    pub project_path: String,
+    pub terminal: String,
+    pub restored_count: usize,
+    pub skipped_count: usize,
+    pub one_window: bool,
 }

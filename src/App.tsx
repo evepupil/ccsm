@@ -5,7 +5,7 @@ import { ProjectSidebar } from "./components/ProjectSidebar";
 import { SessionWorkspace } from "./components/SessionWorkspace";
 import { WindowTitlebar } from "./components/WindowTitlebar";
 import { isSessionArchived, sessionKey } from "./lib/archive";
-import { newSessionLaunchKey } from "./lib/launch";
+import { newSessionLaunchKey, workspaceLaunchKey } from "./lib/launch";
 import { useSessionCatalog } from "./hooks/useSessionCatalog";
 import { useSessionArchive } from "./hooks/useSessionArchive";
 import { useSessionFilters } from "./hooks/useSessionFilters";
@@ -45,6 +45,10 @@ export default function App() {
   const temporarySessionLaunching =
     launcher.launchingSessionKey ===
     newSessionLaunchKey(sessionCatalog.provider, TEMPORARY_PROJECT_ID);
+  const workspaceRestoring = Boolean(
+    sessionCatalog.selectedProject &&
+    launcher.launchingSessionKey === workspaceLaunchKey(sessionCatalog.selectedProject.id),
+  );
   useEffect(() => {
     selection.clearSelection();
   }, [
@@ -122,6 +126,7 @@ export default function App() {
           error={sessionCatalog.error}
           initialLoading={sessionCatalog.loading && !sessionCatalog.catalog}
           newSessionLaunching={newSessionLaunching}
+          workspaceRestoring={workspaceRestoring}
           provider={sessionCatalog.provider}
           selectedProject={sessionCatalog.selectedProject}
           searchQuery={filters.searchQuery}
@@ -146,6 +151,16 @@ export default function App() {
           onNewSession={() => {
             if (!sessionCatalog.selectedProject || filters.searching) return;
             void launcher.launchNew(sessionCatalog.provider, sessionCatalog.selectedProject.id);
+          }}
+          onRestoreWorkspace={() => {
+            if (
+              !sessionCatalog.selectedProject ||
+              sessionCatalog.selectedProject.isTemporary ||
+              filters.searching
+            ) {
+              return;
+            }
+            void launcher.restoreWorkspace(sessionCatalog.selectedProject.id);
           }}
           onResume={(session, fork) => void launcher.launch(session, fork)}
           onCopyId={(sessionId) => void launcher.copySessionId(sessionId)}

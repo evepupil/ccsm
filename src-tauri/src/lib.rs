@@ -3,14 +3,20 @@ mod launcher;
 mod message_previews;
 mod models;
 mod providers;
+mod terminal;
 
 use std::path::Path;
 
-use models::{CliStatus, LaunchResult, NewSessionResult, SessionCatalog, SessionProvider};
+use models::{
+    CliStatus, LaunchResult, NewSessionResult, SessionCatalog, SessionProvider,
+    WorkspaceRestoreResult,
+};
 
 #[tauri::command]
 fn scan_session_catalog() -> Result<SessionCatalog, String> {
-    catalog::scan_sessions().map_err(|error| error.to_string())
+    let mut catalog = catalog::scan_sessions().map_err(|error| error.to_string())?;
+    catalog.open_sessions = launcher::scan_open_sessions(&catalog);
+    Ok(catalog)
 }
 
 #[tauri::command]
@@ -46,6 +52,14 @@ fn start_new_session(
     launcher::start_new_session(provider, &project_id, highest_permissions)
 }
 
+#[tauri::command]
+fn restore_workspace(
+    project_id: String,
+    highest_permissions: bool,
+) -> Result<WorkspaceRestoreResult, String> {
+    launcher::restore_workspace(&project_id, highest_permissions)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -54,7 +68,8 @@ pub fn run() {
             get_cli_statuses,
             get_user_message_previews,
             resume_session,
-            start_new_session
+            start_new_session,
+            restore_workspace
         ])
         .run(tauri::generate_context!())
         .expect("error while running CCSM");

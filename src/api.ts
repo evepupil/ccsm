@@ -1,6 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 
-import type { LaunchResult, NewSessionResult, SessionCatalog, SessionProvider } from "./types";
+import type {
+  LaunchResult,
+  NewSessionResult,
+  SessionCatalog,
+  SessionProvider,
+  WorkspaceRestoreResult,
+} from "./types";
 
 export function scanSessionCatalog(): Promise<SessionCatalog> {
   return invoke<SessionCatalog>("scan_session_catalog");
@@ -39,6 +45,16 @@ export function startNewSession(
 ): Promise<NewSessionResult> {
   return invoke<NewSessionResult>("start_new_session", {
     provider,
+    projectId,
+    highestPermissions,
+  });
+}
+
+export function restoreWorkspace(
+  projectId: string,
+  highestPermissions: boolean,
+): Promise<WorkspaceRestoreResult> {
+  return invoke<WorkspaceRestoreResult>("restore_workspace", {
     projectId,
     highestPermissions,
   });

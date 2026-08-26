@@ -1,5 +1,6 @@
 export interface SessionCatalog {
   projects: ProjectSummary[];
+  openSessions: OpenSessionSummary[];
   scannedAt: string;
   sources: SessionSource[];
   warnings: string[];
@@ -47,12 +48,20 @@ export interface SessionSummary {
   canResume: boolean;
 }
 
+export interface OpenSessionSummary {
+  sessionId: string;
+  provider: SessionProvider;
+  projectPath: string;
+  workingDirectory: string;
+}
+
 export interface LaunchResult {
   sessionId: string;
   provider: SessionProvider;
   terminal: string;
   forked: boolean;
   highestPermissions: boolean;
+  reusedWindow: boolean;
 }
 
 export interface NewSessionResult {
@@ -60,6 +69,14 @@ export interface NewSessionResult {
   terminal: string;
   workingDirectory: string;
   highestPermissions: boolean;
+}
+
+export interface WorkspaceRestoreResult {
+  projectPath: string;
+  terminal: string;
+  restoredCount: number;
+  skippedCount: number;
+  oneWindow: boolean;
 }
 
 export type SessionSort = "recent" | "title";

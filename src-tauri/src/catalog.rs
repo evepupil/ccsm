@@ -59,6 +59,7 @@ fn build_catalog(
     let projects = group_projects(sessions, temporary_root);
     SessionCatalog {
         projects,
+        open_sessions: Vec::new(),
         scanned_at: Utc::now().to_rfc3339_opts(SecondsFormat::Secs, true),
         sources,
         warnings,

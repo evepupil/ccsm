@@ -8,6 +8,10 @@ export function newSessionLaunchKey(provider: SessionProvider, projectId: string
   return `new:${provider}:${projectId}`;
 }
 
+export function workspaceLaunchKey(projectId: string): string {
+  return `workspace:${projectId}`;
+}
+
 export function highestPermissionWarning(enabled: boolean): string | null {
   if (!enabled) return null;
   return "最高权限已开启：Claude Code 将跳过权限确认，Codex 将使用 --yolo。";

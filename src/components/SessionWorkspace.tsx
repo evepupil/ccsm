@@ -1,4 +1,11 @@
-import { AlertCircle, LoaderCircle, MessageSquareOff, Plus, ShieldAlert } from "lucide-react";
+import {
+  AlertCircle,
+  LoaderCircle,
+  MessageSquareOff,
+  PanelsTopLeft,
+  Plus,
+  ShieldAlert,
+} from "lucide-react";
 import { Spinner } from "@heroui/react";
 
 import type { SessionKey } from "../lib/archive";
@@ -14,6 +21,7 @@ interface SessionWorkspaceProps {
   highestPermissions: boolean;
   initialLoading: boolean;
   newSessionLaunching: boolean;
+  workspaceRestoring: boolean;
   launchingSessionKey: string | null;
   permissionWarning: string | null;
   provider: SessionProvider;
@@ -33,6 +41,7 @@ interface SessionWorkspaceProps {
   onClearSelection: () => void;
   onHighestPermissionsChange: (enabled: boolean) => void;
   onNewSession: () => void;
+  onRestoreWorkspace: () => void;
   onResume: (session: SessionSummary, fork: boolean) => void;
   onSelectAll: () => void;
   onShowArchivedChange: (show: boolean) => void;
@@ -50,6 +59,7 @@ export function SessionWorkspace({
   highestPermissions,
   initialLoading,
   newSessionLaunching,
+  workspaceRestoring,
   launchingSessionKey,
   permissionWarning,
   provider,
@@ -69,6 +79,7 @@ export function SessionWorkspace({
   onClearSelection,
   onHighestPermissionsChange,
   onNewSession,
+  onRestoreWorkspace,
   onResume,
   onSelectAll,
   onShowArchivedChange,
@@ -119,6 +130,35 @@ export function SessionWorkspace({
           </div>
           <div className="content-heading-actions">
             {searching && <span className="active-filter">“{searchQuery}”</span>}
+            <button
+              className="restore-workspace-button"
+              type="button"
+              disabled={
+                !selectedProject ||
+                isTemporaryProject ||
+                searching ||
+                workspaceRestoring ||
+                launchingSessionKey !== null
+              }
+              title={
+                searching
+                  ? "请先退出搜索，再恢复当前项目工作区"
+                  : selectedProject
+                    ? isTemporaryProject
+                      ? "临时会话不支持工作区恢复"
+                      : `恢复 ${selectedProject.name} 及子目录中已打开的会话`
+                    : "请选择一个项目"
+              }
+              aria-label="恢复工作区"
+              onClick={onRestoreWorkspace}
+            >
+              {workspaceRestoring ? (
+                <LoaderCircle className="is-spinning" aria-hidden="true" />
+              ) : (
+                <PanelsTopLeft aria-hidden="true" />
+              )}
+              <span>{workspaceRestoring ? "恢复中" : "恢复工作区"}</span>
+            </button>
             <button
               className="new-session-button"
               type="button"
