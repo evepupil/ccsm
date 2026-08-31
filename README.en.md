@@ -16,7 +16,8 @@ CCSM is a local Windows desktop application for browsing Claude Code and Codex s
 - Displays provider, title, activity time, message or token count, file size, Git branch, model, and CLI version.
 - Prioritizes user-defined session titles from Claude Code and Codex, then falls back through each provider's available title sources.
 - Supports CCSM-local archiving, multi-select, bulk archive and restore, and starting a new Claude Code or Codex session for the current project. Archived sessions are hidden from the default list and can be viewed and restored at any time.
-- Periodically scans open terminal sessions; the current project and its subdirectories can be restored into separate tabs in one Windows Terminal window, while Resume prefers an existing window.
+- Periodically scans and saves the last valid workspace for each project. After every terminal closes or CCSM restarts, the current project and its subdirectories can still be restored as tabs in one Windows Terminal window.
+- Resume reuses the existing Windows Terminal when only one window exists. With multiple windows, CCSM uses a project-specific managed window so tabs cannot land in another project.
 - Provides a temporary-session project that groups both providers from temporary directories and refreshes the local catalog automatically.
 - Hovering or focusing the Claude/Codex logo at the left of a session row shows the five most recent user-message previews in order.
 - Supports resuming or forking sessions:
@@ -48,6 +49,7 @@ CCSM is a local Windows desktop application for browsing Claude Code and Codex s
 - Full conversation bodies are read briefly on the local machine only when needed for titles, statistics, or an on-demand preview of the five most recent user messages. Preview text stays in process memory; sessions are never uploaded and API keys are not stored.
 - Before launching a session, CCSM rescans and validates the Session ID and project directory. It will not launch a session when the directory no longer exists.
 - Terminal scanning reads only the process tree, working directory, and session identifier. Command lines, environment variables, and terminal output are not stored.
+- Workspace state is stored in `%LOCALAPPDATA%\CCSM\workspace-state.json` and contains only providers, seen Session IDs, directories, process identifiers and start times, capture times, and managed window names. Ambiguous sessions are excluded from project snapshots.
 - The terminal inherits the current Windows user's CLI configuration. Highest-permission mode is disabled by default, is not persisted locally, and keeps a visible warning while enabled.
 
 ## Download
@@ -134,6 +136,8 @@ src-tauri/src/catalog.rs          Claude Code and Codex project aggregation
 src-tauri/src/providers/claude.rs Claude session and Desktop index parsing
 src-tauri/src/providers/codex.rs  Read-only Codex SQLite indexing
 src-tauri/src/launcher.rs         CLI detection and controlled terminal launching
+src-tauri/src/terminal.rs         Windows terminal process and working-directory scanning
+src-tauri/src/workspace/          Workspace matching, persistence, and restore state
 docs/roadmap.md                   Milestone status
 docs/模块设计/                    Design, verification, and change records
 ```

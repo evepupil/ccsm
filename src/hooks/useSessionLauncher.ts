@@ -56,14 +56,27 @@ export function useSessionLauncher(highestPermissions: boolean) {
       setLaunchingSessionKey(workspaceLaunchKey(projectId));
       try {
         const result = await restoreWorkspace(projectId, highestPermissions);
-        if (result.restoredCount === 0) {
-          toast.success("当前项目没有发现可恢复的已打开会话");
+        if (
+          result.restoredCount === 0 &&
+          result.alreadyOpenCount === 0 &&
+          result.unidentifiedCount === 0 &&
+          result.skippedCount === 0
+        ) {
+          toast.warning("当前项目还没有可恢复的工作区快照");
         } else {
-          const location = result.oneWindow ? "同一窗口的不同标签页" : result.terminal;
-          toast.success(`已在${location}恢复 ${result.restoredCount} 个会话`);
+          if (result.restoredCount > 0) {
+            const location = result.oneWindow ? "同一窗口" : result.terminal;
+            toast.success(`已在${location}创建 ${result.restoredCount} 个恢复标签`);
+          }
+          if (result.alreadyOpenCount > 0) {
+            toast.success(`${result.alreadyOpenCount} 个会话仍在运行，已跳过重复续接`);
+          }
+          if (result.unidentifiedCount > 0) {
+            toast.warning(`${result.unidentifiedCount} 个运行中会话身份未确认，已保留原窗口`);
+          }
         }
         if (result.skippedCount > 0) {
-          toast.danger(`${result.skippedCount} 个已打开会话未能恢复`);
+          toast.danger(`${result.skippedCount} 个快照会话未能创建恢复标签`);
         }
       } catch (cause) {
         toast.danger(toErrorMessage(cause));

@@ -37,7 +37,7 @@ pub struct SessionCatalog {
     pub warnings: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenSessionSummary {
     pub session_id: String,
@@ -121,6 +121,7 @@ pub struct NewSessionResult {
     pub terminal: String,
     pub working_directory: String,
     pub highest_permissions: bool,
+    pub session_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -129,6 +130,8 @@ pub struct WorkspaceRestoreResult {
     pub project_path: String,
     pub terminal: String,
     pub restored_count: usize,
+    pub already_open_count: usize,
+    pub unidentified_count: usize,
     pub skipped_count: usize,
     pub one_window: bool,
 }

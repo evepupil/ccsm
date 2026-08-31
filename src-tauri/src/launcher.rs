@@ -1,5 +1,4 @@
 use std::{
-    collections::HashSet,
     env, fs,
     path::{Path, PathBuf},
     process::{Command, Output},
@@ -15,11 +14,11 @@ use uuid::Uuid;
 use crate::{
     catalog,
     models::{
-        CliStatus, LaunchResult, NewSessionResult, OpenSessionSummary, ProjectSummary,
-        SessionCatalog, SessionProvider, SessionSummary, TEMPORARY_PROJECT_ID,
-        WorkspaceRestoreResult,
+        CliStatus, LaunchResult, NewSessionResult, OpenSessionSummary, SessionCatalog,
+        SessionProvider, SessionSummary, TEMPORARY_PROJECT_ID, WorkspaceRestoreResult,
     },
     terminal::{self, ActiveTerminal, TerminalHost},
+    workspace,
 };
 
 #[cfg(target_os = "windows")]
@@ -30,6 +29,13 @@ const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 struct TerminalLaunch {
     name: String,
     reused_window: bool,
+}
+
+#[derive(Debug, Clone)]
+enum TerminalTarget {
+    New,
+    LastUsed,
+    Named(String),
 }
 
 pub fn cli_statuses() -> Vec<CliStatus> {
@@ -99,10 +105,34 @@ pub fn resume_session(
         highest_permissions,
     );
     let active_terminals = terminal::scan_active_terminals();
-    let reuse_window =
+    let matching_window =
         has_windows_terminal_for_project(&session.project_path, &catalog, &active_terminals);
+    let managed_window = workspace::managed_window_for_path(&session.project_path)
+        .ok()
+        .flatten();
+    let mut project_window = None;
+    let target = if let Some(window_name) = managed_window {
+        TerminalTarget::Named(window_name)
+    } else if matching_window && terminal::windows_terminal_window_count() == 1 {
+        TerminalTarget::LastUsed
+    } else if matching_window {
+        let window_name = workspace_window_name(&session.project_path);
+        project_window = Some(window_name.clone());
+        TerminalTarget::Named(window_name)
+    } else {
+        TerminalTarget::New
+    };
 
-    launch_terminal(&session.project_path, &command, reuse_window).map(|launch| LaunchResult {
+    let launch = launch_terminal(&session.project_path, &command, &target)?;
+    if let Some(window_name) = project_window
+        && let Some(project) = catalog.projects.iter().find(|project| {
+            terminal::normalize_path(&project.path)
+                == terminal::normalize_path(&session.project_path)
+        })
+    {
+        let _ = workspace::mark_project_window(&project.id, &project.path, &window_name);
+    }
+    Ok(LaunchResult {
         session_id,
         provider,
         terminal: launch.name,
@@ -110,38 +140,6 @@ pub fn resume_session(
         highest_permissions,
         reused_window: launch.reused_window,
     })
-}
-
-pub fn scan_open_sessions(catalog: &SessionCatalog) -> Vec<OpenSessionSummary> {
-    let active_terminals = terminal::scan_active_terminals();
-    let mut seen = HashSet::new();
-    let mut open_sessions = active_terminals
-        .into_iter()
-        .filter_map(|active| {
-            let provider = active.provider?;
-            let session = active_session_for_scope(catalog, &active, None, &seen)?;
-            let session_id = session.id.clone();
-            if !seen.insert((provider, session_id.clone())) {
-                return None;
-            }
-
-            Some(OpenSessionSummary {
-                session_id,
-                provider,
-                project_path: session.project_path.clone(),
-                working_directory: active
-                    .working_directory
-                    .unwrap_or_else(|| session.project_path.clone()),
-            })
-        })
-        .collect::<Vec<_>>();
-    open_sessions.sort_by(|left, right| {
-        left.project_path
-            .cmp(&right.project_path)
-            .then_with(|| left.provider.cmp(&right.provider))
-            .then_with(|| left.session_id.cmp(&right.session_id))
-    });
-    open_sessions
 }
 
 pub fn restore_workspace(
@@ -167,16 +165,62 @@ pub fn restore_workspace(
     }
 
     let active_terminals = terminal::scan_active_terminals();
-    let (sessions, mut skipped_count) =
-        resolve_workspace_sessions(project, &catalog, &active_terminals);
+    let sessions = workspace::project_snapshot(project_id)?;
+    let capture = workspace::capture(&catalog, &active_terminals)?;
+    let live_session_keys = capture
+        .live_sessions
+        .iter()
+        .map(open_session_key)
+        .collect::<std::collections::BTreeSet<_>>();
+    let unresolved_in_project = capture
+        .unresolved_terminals
+        .iter()
+        .filter(|terminal| {
+            terminal
+                .working_directory
+                .as_deref()
+                .is_some_and(|path| terminal::is_path_within(&project.path, path))
+        })
+        .collect::<Vec<_>>();
     let mut restored_count = 0;
-    let mut one_window = !sessions.is_empty();
+    let mut already_open_count = 0;
+    let unidentified_count = unresolved_in_project.len();
+    let mut skipped_count = 0;
+    let mut one_window = false;
     let mut terminal_name = "Windows Terminal".to_owned();
+    let window_name = workspace_window_name(&project.path);
+    let target = TerminalTarget::Named(window_name.clone());
 
-    for session in sessions {
+    for saved_session in sessions {
+        let Some(current_session) =
+            find_session(&catalog, saved_session.provider, &saved_session.session_id)
+        else {
+            skipped_count += 1;
+            continue;
+        };
+        if !current_session.can_resume || !Path::new(&current_session.project_path).is_dir() {
+            skipped_count += 1;
+            continue;
+        }
+        let session = OpenSessionSummary {
+            session_id: current_session.id.clone(),
+            provider: current_session.provider,
+            project_path: current_session.project_path.clone(),
+            working_directory: saved_session.working_directory,
+        };
+        if live_session_keys.contains(&open_session_key(&session)) {
+            already_open_count += 1;
+            continue;
+        }
+        if unresolved_in_project
+            .iter()
+            .any(|terminal| unresolved_may_be_session(terminal, &session))
+        {
+            skipped_count += 1;
+            continue;
+        }
         let Some(executable) = find_cli(session.provider) else {
             skipped_count += 1;
-            one_window = false;
             continue;
         };
         let command = build_resume_command(
@@ -186,23 +230,27 @@ pub fn restore_workspace(
             false,
             highest_permissions,
         );
-        match launch_terminal(&session.project_path, &command, true) {
+        match launch_terminal(&session.project_path, &command, &target) {
             Ok(launch) => {
                 restored_count += 1;
                 terminal_name = launch.name;
-                one_window = one_window && launch.reused_window;
+                one_window = one_window || launch.reused_window;
             }
             Err(_) => {
                 skipped_count += 1;
-                one_window = false;
             }
         }
+    }
+    if restored_count > 0 {
+        let _ = workspace::mark_project_window(project_id, &project.path, &window_name);
     }
 
     Ok(WorkspaceRestoreResult {
         project_path: project.path.clone(),
         terminal: terminal_name,
         restored_count,
+        already_open_count,
+        unidentified_count,
         skipped_count,
         one_window,
     })
@@ -220,13 +268,24 @@ pub fn start_new_session(
             SessionProvider::Codex => "未找到可用的 Codex CLI".to_owned(),
         })?;
         let working_directory = create_temporary_session_directory()?;
-        let command = build_new_session_command(provider, &executable, highest_permissions);
-        let terminal = launch_terminal(&working_directory.display().to_string(), &command, false)?;
+        let session_id = new_session_id(provider);
+        let command = build_new_session_command(
+            provider,
+            &executable,
+            highest_permissions,
+            session_id.as_deref(),
+        );
+        let terminal = launch_terminal(
+            &working_directory.display().to_string(),
+            &command,
+            &TerminalTarget::New,
+        )?;
         return Ok(NewSessionResult {
             provider,
             terminal: terminal.name,
             working_directory: working_directory.display().to_string(),
             highest_permissions,
+            session_id,
         });
     }
 
@@ -249,13 +308,22 @@ pub fn start_new_session(
         SessionProvider::Claude => "未找到可用的 Claude Code CLI".to_owned(),
         SessionProvider::Codex => "未找到可用的 Codex CLI".to_owned(),
     })?;
-    let command = build_new_session_command(provider, &executable, highest_permissions);
-
-    launch_terminal(&project.path, &command, false).map(|terminal| NewSessionResult {
+    let session_id = new_session_id(provider);
+    let command = build_new_session_command(
         provider,
-        terminal: terminal.name,
-        working_directory: project.path.clone(),
+        &executable,
         highest_permissions,
+        session_id.as_deref(),
+    );
+
+    launch_terminal(&project.path, &command, &TerminalTarget::New).map(|terminal| {
+        NewSessionResult {
+            provider,
+            terminal: terminal.name,
+            working_directory: project.path.clone(),
+            highest_permissions,
+            session_id,
+        }
     })
 }
 
@@ -271,102 +339,34 @@ fn find_session<'a>(
         .find(|session| session.provider == provider && session.id == session_id)
 }
 
-fn resolve_workspace_sessions(
-    project: &ProjectSummary,
-    catalog: &SessionCatalog,
-    active_terminals: &[ActiveTerminal],
-) -> (Vec<OpenSessionSummary>, usize) {
-    let mut seen = HashSet::new();
-    let mut skipped_count = 0;
-    let mut sessions = Vec::new();
-
-    for active in active_terminals {
-        let Some(provider) = active.provider else {
-            continue;
-        };
-        let Some(session) = active_session_for_scope(catalog, active, Some(&project.path), &seen)
-        else {
-            if active
-                .working_directory
-                .as_deref()
-                .is_some_and(|path| terminal::is_path_within(&project.path, path))
-            {
-                skipped_count += 1;
-            }
-            continue;
-        };
-        if !seen.insert((provider, session.id.clone())) {
-            continue;
-        }
-
-        sessions.push(OpenSessionSummary {
-            session_id: session.id.clone(),
-            provider,
-            project_path: session.project_path.clone(),
-            working_directory: active
-                .working_directory
-                .clone()
-                .unwrap_or_else(|| session.project_path.clone()),
-        });
-    }
-
-    sessions.sort_by(|left, right| {
-        left.project_path
-            .cmp(&right.project_path)
-            .then_with(|| left.provider.cmp(&right.provider))
-            .then_with(|| left.session_id.cmp(&right.session_id))
-    });
-    (sessions, skipped_count)
+fn open_session_key(session: &OpenSessionSummary) -> String {
+    format!("{}:{}", session.provider, session.session_id)
 }
 
-fn active_session_for_scope<'a>(
-    catalog: &'a SessionCatalog,
-    active: &ActiveTerminal,
-    scope_path: Option<&str>,
-    seen: &HashSet<(SessionProvider, String)>,
-) -> Option<&'a SessionSummary> {
-    let provider = active.provider?;
-    if let Some(session_id) = active.session_id.as_deref() {
-        let session = find_session(catalog, provider, session_id)?;
-        if !session.can_resume || seen.contains(&(provider, session.id.clone())) {
-            return None;
-        }
-        if let Some(scope_path) = scope_path {
-            let in_scope = terminal::is_path_within(scope_path, &session.project_path)
-                || active
-                    .working_directory
-                    .as_deref()
-                    .is_some_and(|path| terminal::is_path_within(scope_path, path));
-            if !in_scope {
-                return None;
-            }
-        }
-        return Some(session);
-    }
+fn unresolved_may_be_session(terminal: &ActiveTerminal, session: &OpenSessionSummary) -> bool {
+    terminal.provider == Some(session.provider)
+        && terminal
+            .working_directory
+            .as_deref()
+            .is_some_and(|working_directory| {
+                terminal::is_path_within(&session.project_path, working_directory)
+                    || terminal::is_path_within(working_directory, &session.project_path)
+                    || terminal::is_path_within(&session.working_directory, working_directory)
+                    || terminal::is_path_within(working_directory, &session.working_directory)
+            })
+}
 
-    let working_directory = active.working_directory.as_deref()?;
-    if scope_path.is_some_and(|scope| !terminal::is_path_within(scope, working_directory)) {
-        return None;
-    }
+fn new_session_id(provider: SessionProvider) -> Option<String> {
+    (provider == SessionProvider::Claude).then(|| Uuid::new_v4().to_string())
+}
 
-    catalog
-        .projects
-        .iter()
-        .flat_map(|project| project.sessions.iter())
-        .filter(|session| {
-            session.provider == provider
-                && session.can_resume
-                && !seen.contains(&(provider, session.id.clone()))
-                && scope_path
-                    .is_none_or(|scope| terminal::is_path_within(scope, &session.project_path))
-                && (terminal::is_path_within(&session.project_path, working_directory)
-                    || terminal::is_path_within(working_directory, &session.project_path))
-        })
-        .max_by(|left, right| {
-            left.last_activity
-                .cmp(&right.last_activity)
-                .then_with(|| left.id.cmp(&right.id))
-        })
+fn workspace_window_name(project_path: &str) -> String {
+    let mut hash = 0xcbf2_9ce4_8422_2325_u64;
+    for byte in terminal::normalize_path(project_path).bytes() {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    format!("ccsm-{hash:016x}")
 }
 
 fn has_windows_terminal_for_project(
@@ -576,11 +576,17 @@ fn output_text(output: &Output) -> Option<String> {
 fn launch_terminal(
     project_path: &str,
     command: &str,
-    reuse_existing_window: bool,
+    target: &TerminalTarget,
 ) -> Result<TerminalLaunch, String> {
     let mut windows_terminal = Command::new("wt.exe");
-    if reuse_existing_window {
-        windows_terminal.arg("-w").arg("0");
+    match target {
+        TerminalTarget::New => {}
+        TerminalTarget::LastUsed => {
+            windows_terminal.arg("-w").arg("0");
+        }
+        TerminalTarget::Named(window_name) => {
+            windows_terminal.arg("-w").arg(window_name);
+        }
     }
     let windows_terminal = windows_terminal
         .arg("new-tab")
@@ -591,13 +597,19 @@ fn launch_terminal(
         .arg("-NoExit")
         .arg("-Command")
         .arg(command)
-        .spawn();
+        .status();
 
     match windows_terminal {
-        Ok(_) => Ok(TerminalLaunch {
+        Ok(status) if status.success() => Ok(TerminalLaunch {
             name: "Windows Terminal".to_owned(),
-            reused_window: reuse_existing_window,
+            reused_window: !matches!(target, TerminalTarget::New),
         }),
+        Ok(status) => Err(format!(
+            "Windows Terminal 拒绝了启动请求（退出码 {}）",
+            status
+                .code()
+                .map_or_else(|| "未知".to_owned(), |code| code.to_string())
+        )),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             Command::new("powershell.exe")
                 .current_dir(project_path)
@@ -621,7 +633,7 @@ fn launch_terminal(
 fn launch_terminal(
     _project_path: &str,
     _command: &str,
-    _reuse_existing_window: bool,
+    _target: &TerminalTarget,
 ) -> Result<TerminalLaunch, String> {
     Err("当前版本仅支持 Windows".to_owned())
 }
@@ -661,12 +673,19 @@ fn build_new_session_command(
     provider: SessionProvider,
     executable: &Path,
     highest_permissions: bool,
+    session_id: Option<&str>,
 ) -> String {
-    let arguments = match (provider, highest_permissions) {
-        (SessionProvider::Claude, true) => vec!["--dangerously-skip-permissions"],
-        (SessionProvider::Codex, true) => vec!["--yolo"],
-        (_, false) => Vec::new(),
-    };
+    let mut arguments = Vec::new();
+    if provider == SessionProvider::Claude {
+        if let Some(session_id) = session_id {
+            arguments.extend(["--session-id", session_id]);
+        }
+        if highest_permissions {
+            arguments.push("--dangerously-skip-permissions");
+        }
+    } else if highest_permissions {
+        arguments.push("--yolo");
+    }
     build_powershell_invocation(executable, &arguments)
 }
 
@@ -727,15 +746,17 @@ mod tests {
             build_new_session_command(
                 SessionProvider::Claude,
                 Path::new("C:\\Tools\\claude.exe"),
-                false
+                false,
+                Some(SESSION_ID)
             ),
-            "& 'C:\\Tools\\claude.exe'"
+            "& 'C:\\Tools\\claude.exe' '--session-id' '00000000-0000-4000-8000-000000000001'"
         );
         assert_eq!(
             build_new_session_command(
                 SessionProvider::Codex,
                 Path::new("C:\\Tools\\codex.cmd"),
-                true
+                true,
+                None
             ),
             "& 'C:\\Tools\\codex.cmd' '--yolo'"
         );
@@ -763,158 +784,15 @@ mod tests {
         assert!(version_key("2.10.0") > version_key("2.9.9"));
     }
 
-    fn session(id: &str, provider: SessionProvider, project_path: &str) -> SessionSummary {
-        SessionSummary {
-            id: id.to_owned(),
-            provider,
-            title: format!("{provider} session"),
-            title_source: "fixture".to_owned(),
-            project_path: project_path.to_owned(),
-            source_path: format!("{id}.jsonl"),
-            source_detail: None,
-            created_at: Some("2026-08-26T05:00:00Z".to_owned()),
-            last_activity: "2026-08-26T06:00:00Z".to_owned(),
-            message_count: None,
-            tokens_used: None,
-            branch: None,
-            model: None,
-            cli_version: None,
-            file_size: 100,
-            is_archived: false,
-            can_resume: true,
-        }
-    }
-
-    fn active(
-        provider: Option<SessionProvider>,
-        session_id: Option<&str>,
-        working_directory: &str,
-        host: TerminalHost,
-    ) -> ActiveTerminal {
-        ActiveTerminal {
-            provider,
-            session_id: session_id.map(str::to_owned),
-            working_directory: Some(working_directory.to_owned()),
-            host,
-        }
-    }
-
     #[test]
-    fn resolves_open_sessions_from_a_project_and_its_descendants() {
-        let root = "C:\\Code\\CCSM";
-        let sessions = vec![
-            session(
-                "00000000-0000-4000-8000-000000000001",
-                SessionProvider::Claude,
-                root,
-            ),
-            session(
-                "00000000-0000-4000-8000-000000000002",
-                SessionProvider::Codex,
-                "C:\\Code\\CCSM\\packages\\api",
-            ),
-            session(
-                "00000000-0000-4000-8000-000000000003",
-                SessionProvider::Claude,
-                "C:\\Code\\Other",
-            ),
-            session(
-                "00000000-0000-4000-8000-000000000004",
-                SessionProvider::Claude,
-                "C:\\Code\\CCSM\\packages\\web",
-            ),
-        ];
-        let catalog = SessionCatalog {
-            projects: vec![ProjectSummary {
-                id: root.to_ascii_lowercase(),
-                name: "CCSM".to_owned(),
-                path: root.to_owned(),
-                is_temporary: false,
-                last_activity: "2026-08-26T06:00:00Z".to_owned(),
-                session_count: sessions.len(),
-                total_size: 400,
-                providers: vec![SessionProvider::Claude, SessionProvider::Codex],
-                sessions,
-            }],
-            open_sessions: Vec::new(),
-            scanned_at: "2026-08-26T06:00:00Z".to_owned(),
-            sources: Vec::new(),
-            warnings: Vec::new(),
-        };
-        let active_terminals = vec![
-            active(
-                Some(SessionProvider::Claude),
-                Some("00000000-0000-4000-8000-000000000001"),
-                root,
-                TerminalHost::WindowsTerminal,
-            ),
-            active(
-                Some(SessionProvider::Codex),
-                Some("00000000-0000-4000-8000-000000000002"),
-                "C:\\Code\\CCSM\\packages\\api\\src",
-                TerminalHost::WindowsTerminal,
-            ),
-            active(
-                Some(SessionProvider::Claude),
-                Some("00000000-0000-4000-8000-000000000003"),
-                "C:\\Code\\Other",
-                TerminalHost::WindowsTerminal,
-            ),
-            active(
-                Some(SessionProvider::Claude),
-                None,
-                "C:\\Code\\CCSM\\packages\\api",
-                TerminalHost::WindowsTerminal,
-            ),
-            active(
-                Some(SessionProvider::Claude),
-                None,
-                "C:\\Code\\CCSM\\packages\\web",
-                TerminalHost::WindowsTerminal,
-            ),
-        ];
-
-        let (resolved, skipped) =
-            resolve_workspace_sessions(&catalog.projects[0], &catalog, &active_terminals);
+    fn creates_a_stable_window_name_per_project() {
         assert_eq!(
-            resolved
-                .iter()
-                .map(|session| session.session_id.as_str())
-                .collect::<Vec<_>>(),
-            vec![
-                "00000000-0000-4000-8000-000000000001",
-                "00000000-0000-4000-8000-000000000002",
-                "00000000-0000-4000-8000-000000000004",
-            ]
+            workspace_window_name("C:\\Code\\CCSM"),
+            workspace_window_name("c:/code/ccsm/")
         );
-        assert_eq!(skipped, 1);
-    }
-
-    #[test]
-    fn detects_an_existing_windows_terminal_in_a_project_subdirectory() {
-        let catalog = SessionCatalog {
-            projects: Vec::new(),
-            open_sessions: Vec::new(),
-            scanned_at: String::new(),
-            sources: Vec::new(),
-            warnings: Vec::new(),
-        };
-        let active_terminals = vec![active(
-            None,
-            None,
-            "C:\\Code\\CCSM\\packages\\api",
-            TerminalHost::WindowsTerminal,
-        )];
-
-        assert!(has_windows_terminal_for_project(
-            "C:\\Code\\CCSM",
-            &catalog,
-            &active_terminals
-        ));
-        assert!(!has_windows_terminal_for_project(
-            "C:\\Code\\Other",
-            &catalog,
-            &active_terminals
-        ));
+        assert_ne!(
+            workspace_window_name("C:\\Code\\CCSM"),
+            workspace_window_name("C:\\Code\\Other")
+        );
     }
 }

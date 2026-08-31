@@ -16,7 +16,8 @@ CCSM 是一个面向 Windows 的本地桌面应用，用于统一浏览 Claude C
 - 展示来源、标题、活动时间、消息数或 Token 数、文件大小、Git 分支、模型和 CLI 版本。
 - 优先显示 Claude Code 与 Codex 中的用户自定义会话标题；未设置时继续使用来源提供的标题回退。
 - 支持 CCSM 本地归档、会话多选、批量归档与恢复，以及按当前项目创建新的 Claude Code 或 Codex 会话；归档后默认从列表隐藏，可随时查看并恢复。
-- 支持定时扫描终端中的已打开会话；当前项目及子目录可恢复到同一个 Windows Terminal 窗口的不同标签，“继续”优先复用已有窗口。
+- 支持定时扫描并保存每个项目最后一次有效工作区；终端全部关闭或 CCSM 重启后，当前项目及子目录仍可恢复到同一个 Windows Terminal 窗口的不同标签。
+- “继续”在单窗口场景复用现有 Windows Terminal；多窗口场景进入 CCSM 管理的项目专属窗口，避免标签进入其他项目。
 - 支持临时会话项目，将临时目录中的两类会话集中管理，并在侧栏自动刷新会话目录。
 - 悬浮或聚焦会话列表左侧的 Claude/Codex logo，可查看按顺序排列的最近 5 条用户消息摘要。
 - 支持原会话续接和分叉续接：
@@ -48,6 +49,7 @@ CCSM 是一个面向 Windows 的本地桌面应用，用于统一浏览 Claude C
 - 完整对话正文只在本地解析标题、统计信息或按需生成最近用户消息摘要时短暂读取；摘要只显示最近 5 条用户消息，保存在进程内缓存，不上传会话，也不保存 API Key。
 - 续接前会重新扫描并校验 Session ID 和项目目录；项目目录不存在时不会启动会话。
 - 终端扫描只读取进程树、工作目录和会话标识，不保存命令行、环境变量或终端输出。
+- 工作区状态保存在 `%LOCALAPPDATA%\CCSM\workspace-state.json`，只包含来源、已见 Session ID、目录、进程标识与启动时间、采集时间和项目窗口名；身份无法唯一确认的会话不会写入项目快照。
 - 续接终端继承当前 Windows 用户的 CLI 配置。最高权限默认关闭，不写入本地存储；开启后界面会持续显示风险提示。
 
 ## 下载
@@ -134,6 +136,8 @@ src-tauri/src/catalog.rs          Claude Code 与 Codex 项目合并
 src-tauri/src/providers/claude.rs Claude 会话和 Desktop 索引解析
 src-tauri/src/providers/codex.rs  Codex SQLite 只读索引
 src-tauri/src/launcher.rs         双 CLI 检测和受控终端启动
+src-tauri/src/terminal.rs         Windows 终端进程与工作目录扫描
+src-tauri/src/workspace/          工作区快照匹配、持久化和恢复状态
 docs/roadmap.md                   里程碑状态
 docs/模块设计/                    设计、验证和改动归档
 ```

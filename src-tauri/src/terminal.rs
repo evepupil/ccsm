@@ -13,6 +13,8 @@ pub enum TerminalHost {
 
 #[derive(Debug, Clone)]
 pub struct ActiveTerminal {
+    pub process_id: u32,
+    pub started_at_ms: Option<i64>,
     pub provider: Option<SessionProvider>,
     pub session_id: Option<String>,
     pub working_directory: Option<String>,
@@ -49,27 +51,59 @@ pub fn is_path_within(root: &str, candidate: &str) -> bool {
     candidate.starts_with(&prefix)
 }
 
-pub fn extract_session_id(command_line: &str) -> Option<String> {
-    for token in command_line.split(|character: char| {
-        character.is_whitespace()
-            || matches!(
-                character,
-                '\'' | '"' | '`' | ',' | ';' | '(' | ')' | '[' | ']' | '{' | '}'
-            )
-    }) {
-        if token.is_empty() {
-            continue;
+fn command_tokens(command_line: &str) -> Vec<&str> {
+    command_line
+        .split(|character: char| {
+            character.is_whitespace()
+                || matches!(
+                    character,
+                    '\'' | '"' | '`' | ',' | ';' | '(' | ')' | '[' | ']' | '{' | '}'
+                )
+        })
+        .filter(|token| !token.is_empty())
+        .collect()
+}
+
+fn provider_session_id(provider: SessionProvider, command_line: &str) -> Option<String> {
+    let tokens = command_tokens(command_line);
+    for (index, token) in tokens.iter().enumerate() {
+        let normalized = token.to_ascii_lowercase();
+        let inline_value = normalized
+            .strip_prefix("--resume=")
+            .or_else(|| normalized.strip_prefix("--session-id="));
+        if provider == SessionProvider::Claude {
+            if let Some(value) = inline_value.and_then(valid_session_id) {
+                return Some(value);
+            }
+            if matches!(normalized.as_str(), "--resume" | "-r" | "--session-id")
+                && let Some(value) = tokens
+                    .get(index + 1)
+                    .and_then(|value| valid_session_id(value))
+            {
+                return Some(value);
+            }
         }
-        let candidate = token.rsplit_once('=').map_or(token, |(_, value)| value);
-        if let Ok(session_id) = Uuid::parse_str(candidate.trim_matches('=')) {
-            return Some(session_id.to_string());
+
+        if provider == SessionProvider::Codex
+            && matches!(normalized.as_str(), "resume" | "fork")
+            && let Some(value) = tokens[index + 1..]
+                .iter()
+                .find_map(|value| valid_session_id(value))
+        {
+            return Some(value);
         }
     }
     None
 }
 
-fn normalize_path(path: &str) -> String {
-    let mut normalized = path.trim().replace('/', "\\").to_ascii_lowercase();
+fn valid_session_id(value: &str) -> Option<String> {
+    Uuid::parse_str(value.trim_matches('='))
+        .ok()
+        .map(|id| id.to_string())
+}
+
+pub fn normalize_path(path: &str) -> String {
+    let mut normalized = path.trim().replace('/', "\\").to_lowercase();
     if let Some(rest) = normalized.strip_prefix("\\\\?\\unc\\") {
         normalized = format!("\\\\{rest}");
     } else if let Some(rest) = normalized.strip_prefix("\\\\?\\") {
@@ -91,7 +125,7 @@ use std::{ffi::c_void, mem::size_of};
 use windows_sys::{
     Wdk::System::Threading::{NtQueryInformationProcess, ProcessBasicInformation},
     Win32::{
-        Foundation::{CloseHandle, HANDLE, INVALID_HANDLE_VALUE},
+        Foundation::{CloseHandle, FILETIME, HANDLE, HWND, INVALID_HANDLE_VALUE, LPARAM},
         System::{
             Diagnostics::{
                 Debug::ReadProcessMemory,
@@ -101,10 +135,11 @@ use windows_sys::{
                 },
             },
             Threading::{
-                OpenProcess, PEB, PROCESS_BASIC_INFORMATION, PROCESS_QUERY_LIMITED_INFORMATION,
-                PROCESS_VM_READ,
+                GetProcessTimes, OpenProcess, PEB, PROCESS_BASIC_INFORMATION,
+                PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_VM_READ,
             },
         },
+        UI::WindowsAndMessaging::{EnumWindows, GetWindowThreadProcessId, IsWindowVisible},
     },
 };
 
@@ -116,6 +151,7 @@ struct ProcessRecord {
     name: String,
     command_line: Option<String>,
     current_directory: Option<String>,
+    started_at_ms: Option<i64>,
 }
 
 #[cfg(all(target_os = "windows", target_pointer_width = "64"))]
@@ -144,8 +180,8 @@ struct RemoteUnicodeString {
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
 struct RemoteCurrentDirectory {
-    handle: usize,
     dos_path: RemoteUnicodeString,
+    handle: usize,
 }
 
 #[cfg(all(target_os = "windows", target_pointer_width = "64"))]
@@ -174,11 +210,20 @@ fn scan_windows_terminals() -> Vec<ActiveTerminal> {
         .into_iter()
         .map(|record| (record.pid, record))
         .collect();
+    let provider_by_pid = records_by_pid
+        .values()
+        .filter_map(|record| provider_for_process(record).map(|provider| (record.pid, provider)))
+        .collect::<HashMap<_, _>>();
     let mut terminals = Vec::new();
 
     for record in records_by_pid.values() {
-        let provider = provider_for_process(record);
+        let provider = provider_by_pid.get(&record.pid).copied();
         if provider.is_none() && !is_shell_process(&record.name) {
+            continue;
+        }
+        if provider.is_some_and(|candidate| {
+            has_provider_descendant(record.pid, candidate, &records_by_pid, &provider_by_pid)
+        }) {
             continue;
         }
 
@@ -191,14 +236,17 @@ fn scan_windows_terminals() -> Vec<ActiveTerminal> {
         }
 
         terminals.push(ActiveTerminal {
+            process_id: record.pid,
+            started_at_ms: record.started_at_ms,
             provider,
-            session_id: record.command_line.as_deref().and_then(extract_session_id),
+            session_id: provider
+                .and_then(|provider| session_id_for_process(record.pid, provider, &records_by_pid)),
             working_directory,
             host,
         });
     }
 
-    deduplicate_terminals(terminals)
+    terminals
 }
 
 #[cfg(all(target_os = "windows", target_pointer_width = "64"))]
@@ -226,7 +274,10 @@ fn snapshot_processes() -> Vec<ProcessRecord> {
             command_line: details
                 .as_ref()
                 .and_then(|details| details.command_line.clone()),
-            current_directory: details.and_then(|details| details.current_directory),
+            current_directory: details
+                .as_ref()
+                .and_then(|details| details.current_directory.clone()),
+            started_at_ms: details.as_ref().and_then(|details| details.started_at_ms),
         });
         has_entry = unsafe { Process32NextW(snapshot, &mut entry) } != 0;
     }
@@ -238,6 +289,7 @@ fn snapshot_processes() -> Vec<ProcessRecord> {
 struct ProcessDetails {
     command_line: Option<String>,
     current_directory: Option<String>,
+    started_at_ms: Option<i64>,
 }
 
 #[cfg(all(target_os = "windows", target_pointer_width = "64"))]
@@ -281,7 +333,28 @@ fn read_process_details(pid: u32) -> ProcessDetails {
     ProcessDetails {
         command_line: read_remote_text(handle, parameters.command_line),
         current_directory: read_remote_text(handle, parameters.current_directory.dos_path),
+        started_at_ms: process_started_at_ms(handle),
     }
+}
+
+#[cfg(all(target_os = "windows", target_pointer_width = "64"))]
+fn process_started_at_ms(handle: HANDLE) -> Option<i64> {
+    let mut created = FILETIME::default();
+    let mut exited = FILETIME::default();
+    let mut kernel = FILETIME::default();
+    let mut user = FILETIME::default();
+    let success =
+        unsafe { GetProcessTimes(handle, &mut created, &mut exited, &mut kernel, &mut user) };
+    if success == 0 {
+        return None;
+    }
+
+    let windows_ticks =
+        (u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime);
+    const WINDOWS_TO_UNIX_EPOCH_TICKS: u64 = 116_444_736_000_000_000;
+    windows_ticks
+        .checked_sub(WINDOWS_TO_UNIX_EPOCH_TICKS)
+        .and_then(|ticks| i64::try_from(ticks / 10_000).ok())
 }
 
 #[cfg(all(target_os = "windows", target_pointer_width = "64"))]
@@ -460,6 +533,82 @@ fn terminal_host_for(pid: u32, records: &HashMap<u32, ProcessRecord>) -> Option<
 }
 
 #[cfg(all(target_os = "windows", target_pointer_width = "64"))]
+fn session_id_for_process(
+    pid: u32,
+    provider: SessionProvider,
+    records: &HashMap<u32, ProcessRecord>,
+) -> Option<String> {
+    let mut current_pid = pid;
+    let mut visited = HashSet::new();
+    for _ in 0..64 {
+        if !visited.insert(current_pid) {
+            break;
+        }
+        let record = records.get(&current_pid)?;
+        if let Some(session_id) = record
+            .command_line
+            .as_deref()
+            .and_then(|command_line| provider_session_id(provider, command_line))
+        {
+            return Some(session_id);
+        }
+        if matches!(
+            process_name(&record.name).as_str(),
+            "windowsterminal.exe" | "windowsterminal" | "openconsole.exe" | "openconsolehost.exe"
+        ) {
+            break;
+        }
+        if record.parent_pid == 0 || record.parent_pid == current_pid {
+            break;
+        }
+        current_pid = record.parent_pid;
+    }
+    None
+}
+
+#[cfg(all(target_os = "windows", target_pointer_width = "64"))]
+fn has_provider_descendant(
+    ancestor_pid: u32,
+    provider: SessionProvider,
+    records: &HashMap<u32, ProcessRecord>,
+    provider_by_pid: &HashMap<u32, SessionProvider>,
+) -> bool {
+    provider_by_pid
+        .iter()
+        .any(|(candidate_pid, candidate_provider)| {
+            *candidate_pid != ancestor_pid
+                && *candidate_provider == provider
+                && is_process_ancestor(ancestor_pid, *candidate_pid, records)
+        })
+}
+
+#[cfg(all(target_os = "windows", target_pointer_width = "64"))]
+fn is_process_ancestor(
+    ancestor_pid: u32,
+    child_pid: u32,
+    records: &HashMap<u32, ProcessRecord>,
+) -> bool {
+    let mut current_pid = child_pid;
+    let mut visited = HashSet::new();
+    for _ in 0..64 {
+        if !visited.insert(current_pid) {
+            return false;
+        }
+        let Some(record) = records.get(&current_pid) else {
+            return false;
+        };
+        if record.parent_pid == ancestor_pid {
+            return true;
+        }
+        if record.parent_pid == 0 || record.parent_pid == current_pid {
+            return false;
+        }
+        current_pid = record.parent_pid;
+    }
+    false
+}
+
+#[cfg(all(target_os = "windows", target_pointer_width = "64"))]
 fn process_working_directory(pid: u32, records: &HashMap<u32, ProcessRecord>) -> Option<String> {
     let mut current_pid = pid;
     let mut visited = HashSet::new();
@@ -485,26 +634,67 @@ fn process_working_directory(pid: u32, records: &HashMap<u32, ProcessRecord>) ->
     None
 }
 
-#[cfg(all(target_os = "windows", target_pointer_width = "64"))]
-fn deduplicate_terminals(terminals: Vec<ActiveTerminal>) -> Vec<ActiveTerminal> {
-    let mut deduplicated = Vec::new();
-    for terminal in terminals {
-        let duplicate = deduplicated.iter().position(|existing: &ActiveTerminal| {
-            existing.provider == terminal.provider
-                && existing.session_id == terminal.session_id
-                && existing.working_directory == terminal.working_directory
-                && existing.host == terminal.host
-        });
-        if duplicate.is_none() {
-            deduplicated.push(terminal);
+pub fn windows_terminal_window_count() -> usize {
+    #[cfg(all(target_os = "windows", target_pointer_width = "64"))]
+    {
+        let records = snapshot_processes();
+        let process_ids = records
+            .iter()
+            .filter(|record| {
+                matches!(
+                    process_name(&record.name).as_str(),
+                    "windowsterminal.exe" | "windowsterminal"
+                )
+            })
+            .map(|record| record.pid)
+            .collect::<HashSet<_>>();
+        let mut context = WindowCountContext {
+            process_ids: &process_ids,
+            count: 0,
+        };
+        unsafe {
+            EnumWindows(
+                Some(count_windows_terminal_window),
+                &mut context as *mut WindowCountContext<'_> as LPARAM,
+            );
         }
+        context.count
     }
-    deduplicated
+
+    #[cfg(not(all(target_os = "windows", target_pointer_width = "64")))]
+    {
+        0
+    }
+}
+
+#[cfg(all(target_os = "windows", target_pointer_width = "64"))]
+struct WindowCountContext<'a> {
+    process_ids: &'a HashSet<u32>,
+    count: usize,
+}
+
+#[cfg(all(target_os = "windows", target_pointer_width = "64"))]
+unsafe extern "system" fn count_windows_terminal_window(window: HWND, parameter: LPARAM) -> i32 {
+    if unsafe { IsWindowVisible(window) } == 0 {
+        return 1;
+    }
+    let mut process_id = 0_u32;
+    unsafe {
+        GetWindowThreadProcessId(window, &mut process_id);
+    }
+    let context = unsafe { &mut *(parameter as *mut WindowCountContext<'_>) };
+    if context.process_ids.contains(&process_id) {
+        context.count += 1;
+    }
+    1
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(target_os = "windows")]
+    use std::{fs, os::windows::process::CommandExt, process::Command, thread, time::Duration};
 
     #[test]
     fn matches_a_project_directory_and_its_descendants() {
@@ -529,14 +719,112 @@ mod tests {
     #[test]
     fn extracts_a_uuid_from_a_cli_command() {
         assert_eq!(
-            extract_session_id(
+            provider_session_id(
+                SessionProvider::Codex,
                 "& 'C:\\Tools\\codex.exe' 'resume' '00000000-0000-4000-8000-000000000001'"
             ),
             Some("00000000-0000-4000-8000-000000000001".to_owned())
         );
         assert_eq!(
-            extract_session_id("claude --resume=00000000-0000-4000-8000-000000000002"),
+            provider_session_id(
+                SessionProvider::Claude,
+                "claude --resume=00000000-0000-4000-8000-000000000002"
+            ),
             Some("00000000-0000-4000-8000-000000000002".to_owned())
+        );
+    }
+
+    #[cfg(all(target_os = "windows", target_pointer_width = "64"))]
+    #[test]
+    fn finds_a_resume_id_in_the_parent_command() {
+        let session_id = "00000000-0000-4000-8000-000000000003";
+        let records = [
+            ProcessRecord {
+                pid: 10,
+                parent_pid: 20,
+                name: "claude.exe".to_owned(),
+                command_line: Some("claude.exe --permission-mode default".to_owned()),
+                current_directory: Some("C:\\code\\demo".to_owned()),
+                started_at_ms: Some(1),
+            },
+            ProcessRecord {
+                pid: 20,
+                parent_pid: 30,
+                name: "powershell.exe".to_owned(),
+                command_line: Some(format!("claude.exe --resume {session_id}")),
+                current_directory: Some("C:\\code\\demo".to_owned()),
+                started_at_ms: Some(1),
+            },
+            ProcessRecord {
+                pid: 30,
+                parent_pid: 0,
+                name: "WindowsTerminal.exe".to_owned(),
+                command_line: None,
+                current_directory: None,
+                started_at_ms: Some(1),
+            },
+        ]
+        .into_iter()
+        .map(|record| (record.pid, record))
+        .collect::<HashMap<_, _>>();
+
+        assert_eq!(
+            session_id_for_process(10, SessionProvider::Claude, &records),
+            Some(session_id.to_owned())
+        );
+    }
+
+    #[cfg(all(target_os = "windows", target_pointer_width = "64"))]
+    #[test]
+    fn keeps_the_windows_current_directory_layout() {
+        assert_eq!(
+            std::mem::offset_of!(RemoteProcessParameters, current_directory),
+            0x38
+        );
+        assert_eq!(std::mem::offset_of!(RemoteCurrentDirectory, dos_path), 0);
+        assert_eq!(
+            std::mem::offset_of!(RemoteCurrentDirectory, handle),
+            std::mem::size_of::<RemoteUnicodeString>()
+        );
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn reads_a_real_powershell_working_directory() {
+        let root = std::env::temp_dir().join(format!("ccsm-terminal-scan-{}", Uuid::new_v4()));
+        fs::create_dir_all(&root).expect("create terminal scan fixture");
+        let mut process = Command::new("powershell.exe")
+            .current_dir(&root)
+            .args([
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "Start-Sleep -Seconds 15",
+            ])
+            .creation_flags(0x0800_0000)
+            .spawn()
+            .expect("start powershell fixture");
+
+        let mut detected_directory = None;
+        for _ in 0..30 {
+            detected_directory = scan_active_terminals()
+                .into_iter()
+                .find(|terminal| terminal.process_id == process.id())
+                .and_then(|terminal| terminal.working_directory);
+            if detected_directory.is_some() {
+                break;
+            }
+            thread::sleep(Duration::from_millis(100));
+        }
+
+        process.kill().expect("stop powershell fixture");
+        process.wait().expect("wait for powershell fixture");
+        fs::remove_dir_all(&root).expect("remove terminal scan fixture");
+
+        assert_eq!(
+            detected_directory.map(|path| normalize_path(&path)),
+            Some(normalize_path(&root.display().to_string()))
         );
     }
 }

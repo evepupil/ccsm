@@ -69,12 +69,15 @@ export interface NewSessionResult {
   terminal: string;
   workingDirectory: string;
   highestPermissions: boolean;
+  sessionId: string | null;
 }
 
 export interface WorkspaceRestoreResult {
   projectPath: string;
   terminal: string;
   restoredCount: number;
+  alreadyOpenCount: number;
+  unidentifiedCount: number;
   skippedCount: number;
   oneWindow: boolean;
 }

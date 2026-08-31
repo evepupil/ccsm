@@ -4,6 +4,7 @@ mod message_previews;
 mod models;
 mod providers;
 mod terminal;
+mod workspace;
 
 use std::path::Path;
 
@@ -15,7 +16,13 @@ use models::{
 #[tauri::command]
 fn scan_session_catalog() -> Result<SessionCatalog, String> {
     let mut catalog = catalog::scan_sessions().map_err(|error| error.to_string())?;
-    catalog.open_sessions = launcher::scan_open_sessions(&catalog);
+    let active_terminals = terminal::scan_active_terminals();
+    match workspace::capture(&catalog, &active_terminals) {
+        Ok(capture) => catalog.open_sessions = capture.saved_sessions,
+        Err(error) => catalog
+            .warnings
+            .push(format!("工作区快照暂时无法更新：{error}")),
+    }
     Ok(catalog)
 }
 
